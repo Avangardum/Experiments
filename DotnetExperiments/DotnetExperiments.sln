@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilknetOpenglHelloQuad", "SilknetOpenglHelloQuad\SilknetOpenglHelloQuad.csproj", "{7FB53B44-7D13-49DF-9F4B-A08D4EE673E2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilknetOpenglBlocks", "SilknetOpenglBlocks\SilknetOpenglBlocks.csproj", "{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{7FB53B44-7D13-49DF-9F4B-A08D4EE673E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FB53B44-7D13-49DF-9F4B-A08D4EE673E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7FB53B44-7D13-49DF-9F4B-A08D4EE673E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
