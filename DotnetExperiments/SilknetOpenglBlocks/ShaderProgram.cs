@@ -3,7 +3,7 @@ using Silk.NET.OpenGL;
 
 namespace SilknetOpenglBlocks;
 
-public sealed class ShaderProgram : IDisposable
+public class ShaderProgram : IDisposable
 {
     private readonly GL _gl;
     private readonly uint _id;
@@ -23,7 +23,6 @@ public sealed class ShaderProgram : IDisposable
         Name = name;
         
         ImmutableList<uint> shaderIds = LoadAndCompileShaders();
-        
         _id = _gl.CreateProgram();
         shaderIds.ForEach(x => _gl.AttachShader(_id, x));
         _gl.LinkProgram(_id);
@@ -57,10 +56,15 @@ public sealed class ShaderProgram : IDisposable
         return shaderIds;
     }
     
-    public void Use() => _gl.UseProgram(_id);
-    
+    public void Use()
+    {
+        if (_isDisposed) throw new ObjectDisposedException($"Shader \"{Name}\"");
+        _gl.UseProgram(_id);
+    }
+
     public void Dispose()
     {
+        _isDisposed = true;
         _gl.DeleteProgram(_id);
         GC.SuppressFinalize(this);
     }

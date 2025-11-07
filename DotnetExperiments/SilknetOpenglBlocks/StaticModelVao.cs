@@ -10,10 +10,10 @@ public sealed class StaticModelVao
     private readonly bool _useEbo;
     private readonly uint _vertexCount;
     
-    public StaticModelVao(GL gl, ReadOnlySpan<float> vertices, ReadOnlySpan<int> vertexAttributeSizes) :
+    public StaticModelVao(GL gl, IReadOnlyList<float> vertices, IReadOnlyList<int> vertexAttributeSizes) :
         this(gl, vertices, vertexAttributeSizes, []) {}
     
-    public StaticModelVao(GL gl, ReadOnlySpan<float> vertices, ReadOnlySpan<int> vertexAttributeSizes, ReadOnlySpan<uint> indices)
+    public StaticModelVao(GL gl, IReadOnlyList<float> vertices, IReadOnlyList<int> vertexAttributeSizes, IReadOnlyList<uint> indices)
     {
         _gl = gl;
         
@@ -22,22 +22,22 @@ public sealed class StaticModelVao
         
         uint vboId = _gl.GenBuffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vboId);
-        _gl.BufferData(BufferTargetARB.ArrayBuffer, vertices, BufferUsageARB.StaticDraw);
+        _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, vertices.ToArray(), BufferUsageARB.StaticDraw);
         
-        _useEbo = !indices.IsEmpty;
+        _useEbo = indices.Any();
         if (_useEbo)
         {
             uint eboId = _gl.CreateBuffer();
             _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, eboId);
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, indices, BufferUsageARB.StaticDraw);
+            _gl.BufferData<uint>(BufferTargetARB.ElementArrayBuffer, indices.ToArray(), BufferUsageARB.StaticDraw);
         }
         
-        int vertexSize = vertexAttributeSizes.ToImmutableArray().Sum();
+        int vertexSize = vertexAttributeSizes.Sum();
         uint stride = (uint)vertexSize * sizeof(float);
-        for (int i = 0; i < vertexAttributeSizes.Length; i++)
+        for (int i = 0; i < vertexAttributeSizes.Count; i++)
         {
             _gl.EnableVertexAttribArray((uint)i);
-            nint offset = vertexAttributeSizes.ToImmutableArray().Take(i).Sum();
+            nint offset = vertexAttributeSizes.Take(i).Sum();
             int size = vertexAttributeSizes[i];
             _gl.VertexAttribPointer((uint)i, size, VertexAttribPointerType.Float, false, stride, offset);
         }
@@ -46,18 +46,13 @@ public sealed class StaticModelVao
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, 0);
         
-        _vertexCount = (uint)(_useEbo ? indices.Length : vertices.Length / vertexSize);
+        _vertexCount = (uint)(_useEbo ? indices.Count : vertices.Count / vertexSize);
     }
     
-    public unsafe void Draw(ShaderProgram program)
+    public unsafe void Draw()
     {
-        program.Use();
         _gl.BindVertexArray(_id);
-        
-        if (_useEbo) _gl.DrawElements(PrimitiveType.Triangles, _vertexCount, DrawElementsType.UnsignedInt, (void*)0);
+        if (_useEbo) _gl.DrawElements(PrimitiveType.Triangles, _vertexCount, DrawElementsType.UnsignedInt, null);
         else _gl.DrawArrays(PrimitiveType.Triangles, 0, _vertexCount);
-        
-        _gl.UseProgram(0);
-        _gl.BindVertexArray(0);
     }
 }

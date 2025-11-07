@@ -10,7 +10,7 @@ public static class Program
 {
     private static IWindow _window = null!;
     private static GL _gl = null!;
-    private static ShaderProgram _shaderProgram = null!;
+    private static ShaderProgram _blockShaderProgram = null!;
     private static StaticModelVao _blockVao;
     
     private static void Main()
@@ -49,26 +49,27 @@ public static class Program
     
     private static void SetupShaders()
     {
-        _shaderProgram = new ShaderProgram(_gl, "Block");
+        _blockShaderProgram = new ShaderProgram(_gl, "Block");
     }
     
     private static void SetupBlockVao()
     {
-        ReadOnlySpan<float> vertices =
+        IReadOnlyList<float> vertices =
         [
-             0.5f,  0.5f, 0.0f,
-             0.5f, -0.5f, 0.0f,
-            -0.5f, -0.5f, 0.0f,
-            -0.5f,  0.5f, 0.0f
+//           x      y      z     u   v   light
+            -0.5f, -0.5f,  0.5f, 0f, 0f, 1.0f,  // 0  front
+            -0.5f,  0.5f,  0.5f, 1f, 0f, 1.0f,  // 1
+             0.5f,  0.5f,  0.5f, 1f, 1f, 1.0f,  // 2
+             0.5f, -0.5f,  0.5f, 0f, 1f, 1.0f,  // 3
         ];
         
-        ReadOnlySpan<uint> indices =
+        IReadOnlyList<uint> indices =
         [
-            0u, 1u, 3u,
-            1u, 2u, 3u
+            0, 1, 2,
+            0, 2, 3
         ];
         
-        ReadOnlySpan<int> vertexAttributeSizes = [3];
+        IReadOnlyList<int> vertexAttributeSizes = [3, 2, 1];
         
         _blockVao = new StaticModelVao(_gl, vertices, vertexAttributeSizes, indices);
     }
@@ -86,6 +87,7 @@ public static class Program
     private static void OnRender(double deltaTime)
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        _blockVao.Draw(_shaderProgram);
+        _blockShaderProgram.Use();
+        _blockVao.Draw();
     }
 }
