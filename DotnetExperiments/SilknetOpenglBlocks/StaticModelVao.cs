@@ -37,7 +37,7 @@ public sealed class StaticModelVao
         for (int i = 0; i < vertexAttributeSizes.Count; i++)
         {
             _gl.EnableVertexAttribArray((uint)i);
-            nint offset = vertexAttributeSizes.Take(i).Sum();
+            nint offset = vertexAttributeSizes.Take(i).Sum() * sizeof(float);
             int size = vertexAttributeSizes[i];
             _gl.VertexAttribPointer((uint)i, size, VertexAttribPointerType.Float, false, stride, offset);
         }

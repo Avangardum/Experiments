@@ -1,8 +1,12 @@
 #version 330 core
 
-out vec4 out_color;
+in vec2 textureCoordinates;
+in float light;
+out vec4 color;
+uniform sampler2D textureSampler;
 
 void main()
 {
-    out_color = vec4(1.0, 0.5, 0.2, 1.0);
+    color = texture(textureSampler, textureCoordinates);
+    color.rgb *= light;
 }

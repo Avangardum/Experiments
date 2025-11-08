@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Numerics;
 using Silk.NET.OpenGL;
 
 namespace SilknetOpenglBlocks;
@@ -6,9 +7,9 @@ namespace SilknetOpenglBlocks;
 public class ShaderProgram : IDisposable
 {
     private readonly GL _gl;
-    private readonly uint _id;
     private bool _isDisposed;
-    
+
+    public uint Id { get; }
     public string Name { get; }
     
     private static readonly ImmutableList<(ShaderType ShaderType, string Extension)> ShaderTypesAndExtensions =
@@ -23,13 +24,13 @@ public class ShaderProgram : IDisposable
         Name = name;
         
         ImmutableList<uint> shaderIds = LoadAndCompileShaders();
-        _id = _gl.CreateProgram();
-        shaderIds.ForEach(x => _gl.AttachShader(_id, x));
-        _gl.LinkProgram(_id);
-        _gl.GetProgram(_id, ProgramPropertyARB.LinkStatus, out int linkStatus);
+        Id = _gl.CreateProgram();
+        shaderIds.ForEach(x => _gl.AttachShader(Id, x));
+        _gl.LinkProgram(Id);
+        _gl.GetProgram(Id, ProgramPropertyARB.LinkStatus, out int linkStatus);
         if (linkStatus == 0)
-            throw new Exception($"{name} failed to link.\n{_gl.GetProgramInfoLog(_id)}");
-        shaderIds.ForEach(x => _gl.DetachShader(_id, x));
+            throw new Exception($"{name} failed to link.\n{_gl.GetProgramInfoLog(Id)}");
+        shaderIds.ForEach(x => _gl.DetachShader(Id, x));
         shaderIds.ForEach(x => _gl.DeleteShader(x));
     }
     
@@ -59,18 +60,35 @@ public class ShaderProgram : IDisposable
     public void Use()
     {
         if (_isDisposed) throw new ObjectDisposedException($"Shader \"{Name}\"");
-        _gl.UseProgram(_id);
+        _gl.UseProgram(Id);
     }
 
     public void Dispose()
     {
         _isDisposed = true;
-        _gl.DeleteProgram(_id);
+        _gl.DeleteProgram(Id);
         GC.SuppressFinalize(this);
     }
     
     ~ShaderProgram()
     {
         Dispose();
+    }
+    
+    private int GetUniformLocation(string name)
+    {
+        int location = _gl.GetUniformLocation(Id, name);
+        if (location == -1) throw new ArgumentException($"Uniform {name} not found.");
+        return location;
+    }
+
+    public void SetUniform(string name, float value)
+    {
+        _gl.Uniform1(GetUniformLocation(name), value);
+    }
+    
+    public unsafe void SetUniform(string name, Matrix4x4 value)
+    {
+        _gl.UniformMatrix4(GetUniformLocation(name), 1, false, (float*)&value);
     }
 }

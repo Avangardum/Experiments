@@ -1,8 +1,10 @@
 ﻿using System.Drawing;
+using System.Numerics;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using StbImageSharp;
 
 namespace SilknetOpenglBlocks;
 
@@ -11,7 +13,8 @@ public static class Program
     private static IWindow _window = null!;
     private static GL _gl = null!;
     private static ShaderProgram _blockShaderProgram = null!;
-    private static StaticModelVao _blockVao;
+    private static StaticModelVao _blockVao = null!;
+    private static uint _blockTextureId;
     
     private static void Main()
     {
@@ -36,6 +39,7 @@ public static class Program
         _gl.ClearColor(Color.CornflowerBlue);
         SetupShaders();
         SetupBlockVao();
+        SetupBlockTexture();
     }
 
     private static void SetupInput()
@@ -57,10 +61,10 @@ public static class Program
         IReadOnlyList<float> vertices =
         [
 //           x      y      z     u   v   light
-            -0.5f, -0.5f,  0.5f, 0f, 0f, 1.0f,  // 0  front
-            -0.5f,  0.5f,  0.5f, 1f, 0f, 1.0f,  // 1
+            -0.5f, -0.5f,  0.5f, 0f, 0f, 0.2f,  // 0  front
+            -0.5f,  0.5f,  0.5f, 1f, 0f, 0.5f,  // 1
              0.5f,  0.5f,  0.5f, 1f, 1f, 1.0f,  // 2
-             0.5f, -0.5f,  0.5f, 0f, 1f, 1.0f,  // 3
+             0.5f, -0.5f,  0.5f, 0f, 1f, 0.8f,  // 3
         ];
         
         IReadOnlyList<uint> indices =
@@ -72,6 +76,34 @@ public static class Program
         IReadOnlyList<int> vertexAttributeSizes = [3, 2, 1];
         
         _blockVao = new StaticModelVao(_gl, vertices, vertexAttributeSizes, indices);
+    }
+    
+    private static unsafe void SetupBlockTexture()
+    {
+        _blockTextureId = _gl.GenTexture();
+        _gl.ActiveTexture(GLEnum.Texture0);
+        _gl.BindTexture(TextureTarget.Texture2D, _blockTextureId);
+        
+        byte[] bytes = File.ReadAllBytes("Textures/Blocks.png");
+        ImageResult imageResult = ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha);
+        fixed (byte* ptr = imageResult.Data)
+            _gl.TexImage2D
+            (
+                target: TextureTarget.Texture2D,
+                level: 0,
+                internalformat: InternalFormat.Rgba,
+                width: (uint)imageResult.Width,
+                height: (uint)imageResult.Height,
+                border: 0,
+                format: PixelFormat.Rgba,
+                type: PixelType.UnsignedByte,
+                pixels: ptr
+            );
+        
+        _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+        _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+        _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+        _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
     }
 
     private static void OnKeyDown(IKeyboard keyboard, Key key, int keyCode)
@@ -88,6 +120,10 @@ public static class Program
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
+        _blockShaderProgram.SetUniform("textureSampler", 0);
+        _blockShaderProgram.SetUniform("model", Matrix4x4.Identity);
+        _blockShaderProgram.SetUniform("view", Matrix4x4.Identity);
+        _blockShaderProgram.SetUniform("projection", Matrix4x4.Identity);
         _blockVao.Draw();
     }
 }
