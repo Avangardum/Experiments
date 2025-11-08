@@ -15,12 +15,13 @@ public static class Program
     private static ShaderProgram _blockShaderProgram = null!;
     private static StaticModelVao _blockVao = null!;
     private static uint _blockTextureId;
+    private static float _time;
     
     private static void Main()
     {
         WindowOptions options = WindowOptions.Default with
         {
-            Size = new Vector2D<int>(800, 600),
+            Size = new Vector2D<int>(800, 800),
             Title = "Silk.NET OpenGL Blocks"
         };
         _window = Window.Create(options);
@@ -37,6 +38,7 @@ public static class Program
         SetupInput();
         _gl = _window.CreateOpenGL();
         _gl.ClearColor(Color.CornflowerBlue);
+        _gl.Enable(EnableCap.DepthTest);
         SetupShaders();
         SetupBlockVao();
         SetupBlockTexture();
@@ -60,17 +62,47 @@ public static class Program
     {
         IReadOnlyList<float> vertices =
         [
-//           x      y      z     u   v   light
-            -0.5f, -0.5f,  0.5f, 0f, 0f, 0.2f,  // 0  front
-            -0.5f,  0.5f,  0.5f, 1f, 0f, 0.5f,  // 1
-             0.5f,  0.5f,  0.5f, 1f, 1f, 1.0f,  // 2
-             0.5f, -0.5f,  0.5f, 0f, 1f, 0.8f,  // 3
+//           x      y      z     u  v  light
+            -0.5f, -0.5f,  0.5f, 0, 1, 1.0f,  // 0 front
+            -0.5f,  0.5f,  0.5f, 0, 0, 1.0f,  // 1
+             0.5f,  0.5f,  0.5f, 1, 0, 1.0f,  // 2
+             0.5f, -0.5f,  0.5f, 1, 1, 1.0f,  // 3
+             0.5f, -0.5f, -0.5f, 0, 1, 0.5f,  // 4 back
+             0.5f,  0.5f, -0.5f, 0, 0, 0.5f,  // 5
+            -0.5f,  0.5f, -0.5f, 1, 0, 0.5f,  // 6
+            -0.5f, -0.5f, -0.5f, 1, 1, 0.5f,  // 7
+             0.5f, -0.5f,  0.5f, 0, 1, 0.8f,  // 8 right
+             0.5f,  0.5f,  0.5f, 0, 0, 0.8f,  // 9
+             0.5f,  0.5f, -0.5f, 1, 0, 0.8f,  // 10
+             0.5f, -0.5f, -0.5f, 1, 1, 0.8f,  // 11
+            -0.5f, -0.5f, -0.5f, 0, 1, 0.6f,  // 12 left
+            -0.5f,  0.5f, -0.5f, 0, 0, 0.6f,  // 13
+            -0.5f,  0.5f,  0.5f, 1, 0, 0.6f,  // 14
+            -0.5f, -0.5f,  0.5f, 1, 1, 0.6f,  // 15
+            -0.5f,  0.5f,  0.5f, 0, 1, 0.9f,  // 16 top
+            -0.5f,  0.5f, -0.5f, 0, 0, 0.9f,  // 17
+             0.5f,  0.5f, -0.5f, 1, 0, 0.9f,  // 18
+             0.5f,  0.5f,  0.5f, 1, 1, 0.9f,  // 19
+            -0.5f, -0.5f, -0.5f, 0, 1, 0.2f,  // 20 bottom
+            -0.5f, -0.5f,  0.5f, 0, 0, 0.2f,  // 21
+             0.5f, -0.5f,  0.5f, 1, 0, 0.2f,  // 22
+             0.5f, -0.5f, -0.5f, 1, 1, 0.2f,  // 23
         ];
         
         IReadOnlyList<uint> indices =
         [
-            0, 1, 2,
-            0, 2, 3
+             0,  1,  2, // front
+             0,  2,  3,
+             4,  5,  6, // back
+             4,  6,  7,
+             8,  9, 10, // right
+             8, 10, 11,
+            12, 13, 14, // left
+            12, 14, 15,
+            16, 17, 18, // top
+            16, 18, 19,
+            20, 21, 22, // bottom
+            20, 22, 23,
         ];
         
         IReadOnlyList<int> vertexAttributeSizes = [3, 2, 1];
@@ -121,9 +153,14 @@ public static class Program
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
         _blockShaderProgram.SetUniform("textureSampler", 0);
-        _blockShaderProgram.SetUniform("model", Matrix4x4.Identity);
+        _time += (float)deltaTime;
+        var rotationY = _time * 100 % 360;
+        float yPos = MathF.Sin(_time);
+        var model = Matrix4x4.CreateRotationY(float.DegreesToRadians(rotationY)) * Matrix4x4.CreateTranslation(0, yPos, -3f);
+        var projection = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), 1, 0.01f, 100f);
+        _blockShaderProgram.SetUniform("model", model);
         _blockShaderProgram.SetUniform("view", Matrix4x4.Identity);
-        _blockShaderProgram.SetUniform("projection", Matrix4x4.Identity);
+        _blockShaderProgram.SetUniform("projection", projection);
         _blockVao.Draw();
     }
 }
