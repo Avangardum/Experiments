@@ -12,11 +12,17 @@ public static class Program
 {
     private static IWindow _window = null!;
     private static GL _gl = null!;
+    private static IInputContext _input = null!;
     private static ShaderProgram _blockShaderProgram = null!;
     private static StaticModelVao _blockVao = null!;
     private static uint _blockTextureId;
     private static float _time;
-    
+    private static Vector3 _cameraPosition = new(0, 2, 3);
+    private static Vector3 _cameraFront = new(0, 0, -1);
+    private static Vector3 _cameraUp = new(0, 1, 0);
+    private static float _cameraPitch;
+    private static float _cameraYaw = -90;
+
     private static void Main()
     {
         WindowOptions options = WindowOptions.Default with
@@ -42,14 +48,20 @@ public static class Program
         SetupShaders();
         SetupBlockVao();
         SetupBlockTexture();
+        Console.WriteLine(_gl.GetInteger(GetPName.MaxTextureSize));
     }
 
     private static void SetupInput()
     {
-        IInputContext input = _window.CreateInput();
-        foreach (IKeyboard keyboard in input.Keyboards)
+        _input = _window.CreateInput();
+        foreach (IKeyboard keyboard in _input.Keyboards)
         {
             keyboard.KeyDown += OnKeyDown;
+        }
+        foreach (IMouse mouse in _input.Mice)
+        {
+            mouse.Cursor.CursorMode = CursorMode.Disabled;
+            mouse.MouseMove += OnMouseMove;
         }
     }
     
@@ -150,17 +162,56 @@ public static class Program
     
     private static void OnRender(double deltaTime)
     {
+        ProcessInput(deltaTime);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
         _blockShaderProgram.SetUniform("textureSampler", 0);
         _time += (float)deltaTime;
-        var rotationY = _time * 100 % 360;
-        float yPos = MathF.Sin(_time);
+        var rotationY = 0;//_time * 100 % 360;
+        float yPos = 0;
+        Func<float, float> sin = it => float.Sin(float.DegreesToRadians(it));
+        Func<float, float> cos = it => float.Cos(float.DegreesToRadians(it));
+        _cameraFront = Vector3.Normalize
+            (
+                new Vector3
+                (
+                    cos(_cameraYaw) * cos(_cameraPitch),
+                    sin(_cameraPitch),
+                    sin(_cameraYaw) * cos(_cameraPitch)
+                )
+            );
         var model = Matrix4x4.CreateRotationY(float.DegreesToRadians(rotationY)) * Matrix4x4.CreateTranslation(0, yPos, -3f);
+        var view = Matrix4x4.CreateLookAt(_cameraPosition, _cameraPosition + _cameraFront, _cameraUp);
         var projection = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), 1, 0.01f, 100f);
         _blockShaderProgram.SetUniform("model", model);
-        _blockShaderProgram.SetUniform("view", Matrix4x4.Identity);
+        _blockShaderProgram.SetUniform("view", view);
         _blockShaderProgram.SetUniform("projection", projection);
         _blockVao.Draw();
     }
+    
+    private static void ProcessInput(double deltaTime)
+    {
+        const float speed = 4;
+        if (IsKeyPressed(Key.A)) _cameraPosition -= Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp)) * (float)deltaTime * speed; 
+        if (IsKeyPressed(Key.D)) _cameraPosition += Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp)) * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.W)) _cameraPosition += _cameraFront * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.S)) _cameraPosition -= _cameraFront * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.Space)) _cameraPosition += Vector3.UnitY * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.ShiftLeft)) _cameraPosition -= Vector3.UnitY * (float)deltaTime * speed;
+    }
+    
+    private static Vector2? _lastMousePosition;
+    
+    private static void OnMouseMove(IMouse mouse, Vector2 position)
+    {
+        _lastMousePosition ??= position;
+        Vector2 delta = position - _lastMousePosition.Value;
+        const float sensitivity = 0.05f;
+        _cameraYaw += delta.X * sensitivity;
+        _cameraPitch -= delta.Y * sensitivity;
+        _cameraPitch = float.Clamp(_cameraPitch, -89, 89);
+        _lastMousePosition = position;
+    }
+    
+    private static bool IsKeyPressed(Key key) => _input.Keyboards.Any(x => x.IsKeyPressed(key));
 }
