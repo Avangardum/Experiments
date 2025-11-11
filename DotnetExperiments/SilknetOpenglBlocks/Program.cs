@@ -16,18 +16,20 @@ public static class Program
     private static ShaderProgram _blockShaderProgram = null!;
     private static StaticModelVao _blockVao = null!;
     private static uint _blockTextureId;
-    private static float _time;
-    private static Vector3 _cameraPosition = new(0, 2, 3);
+    private static Vector3 _cameraPosition = new(16, 40, 16);
     private static Vector3 _cameraFront = new(0, 0, -1);
     private static Vector3 _cameraUp = new(0, 1, 0);
     private static float _cameraPitch;
     private static float _cameraYaw = -90;
+    private const int ChunkSize = 64;
+    private static Block[,,] _chunk = new Block[ChunkSize, ChunkSize, ChunkSize];
 
     private static void Main()
     {
+        InitChunk();
         WindowOptions options = WindowOptions.Default with
         {
-            Size = new Vector2D<int>(800, 800),
+            Size = new Vector2D<int>(1200, 1200),
             Title = "Silk.NET OpenGL Blocks"
         };
         _window = Window.Create(options);
@@ -39,6 +41,21 @@ public static class Program
         _window.Run();
     }
     
+    private static void InitChunk()
+    {
+        for (int x = 0; x < ChunkSize; x++)
+        for (int y = 0; y < ChunkSize; y++)
+        for (int z = 0; z < ChunkSize; z++)
+        {
+            _chunk[x, y, z] = y switch
+            {
+                < 32 => Block.Stone,
+                32 => Block.Dirt,
+                _ => Block.Air
+            };
+        }
+    }
+    
     private static void OnLoad()
     {
         SetupInput();
@@ -48,7 +65,7 @@ public static class Program
         SetupShaders();
         SetupBlockVao();
         SetupBlockTexture();
-        Console.WriteLine(_gl.GetInteger(GetPName.MaxTextureSize));
+        //_gl.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
     }
 
     private static void SetupInput()
@@ -77,38 +94,38 @@ public static class Program
 //           x      y      z     u  v  light
             -0.5f, -0.5f,  0.5f, 0, 1, 1.0f,  // 0 front
             -0.5f,  0.5f,  0.5f, 0, 0, 1.0f,  // 1
-             0.5f,  0.5f,  0.5f, 1, 0, 1.0f,  // 2
-             0.5f, -0.5f,  0.5f, 1, 1, 1.0f,  // 3
-             0.5f, -0.5f, -0.5f, 0, 1, 0.5f,  // 4 back
-             0.5f,  0.5f, -0.5f, 0, 0, 0.5f,  // 5
+            0.5f,  0.5f,  0.5f, 1, 0, 1.0f,  // 2
+            0.5f, -0.5f,  0.5f, 1, 1, 1.0f,  // 3
+            0.5f, -0.5f, -0.5f, 0, 1, 0.5f,  // 4 back
+            0.5f,  0.5f, -0.5f, 0, 0, 0.5f,  // 5
             -0.5f,  0.5f, -0.5f, 1, 0, 0.5f,  // 6
             -0.5f, -0.5f, -0.5f, 1, 1, 0.5f,  // 7
-             0.5f, -0.5f,  0.5f, 0, 1, 0.8f,  // 8 right
-             0.5f,  0.5f,  0.5f, 0, 0, 0.8f,  // 9
-             0.5f,  0.5f, -0.5f, 1, 0, 0.8f,  // 10
-             0.5f, -0.5f, -0.5f, 1, 1, 0.8f,  // 11
+            0.5f, -0.5f,  0.5f, 0, 1, 0.8f,  // 8 right
+            0.5f,  0.5f,  0.5f, 0, 0, 0.8f,  // 9
+            0.5f,  0.5f, -0.5f, 1, 0, 0.8f,  // 10
+            0.5f, -0.5f, -0.5f, 1, 1, 0.8f,  // 11
             -0.5f, -0.5f, -0.5f, 0, 1, 0.6f,  // 12 left
             -0.5f,  0.5f, -0.5f, 0, 0, 0.6f,  // 13
             -0.5f,  0.5f,  0.5f, 1, 0, 0.6f,  // 14
             -0.5f, -0.5f,  0.5f, 1, 1, 0.6f,  // 15
             -0.5f,  0.5f,  0.5f, 0, 1, 0.9f,  // 16 top
             -0.5f,  0.5f, -0.5f, 0, 0, 0.9f,  // 17
-             0.5f,  0.5f, -0.5f, 1, 0, 0.9f,  // 18
-             0.5f,  0.5f,  0.5f, 1, 1, 0.9f,  // 19
+            0.5f,  0.5f, -0.5f, 1, 0, 0.9f,  // 18
+            0.5f,  0.5f,  0.5f, 1, 1, 0.9f,  // 19
             -0.5f, -0.5f, -0.5f, 0, 1, 0.2f,  // 20 bottom
             -0.5f, -0.5f,  0.5f, 0, 0, 0.2f,  // 21
-             0.5f, -0.5f,  0.5f, 1, 0, 0.2f,  // 22
-             0.5f, -0.5f, -0.5f, 1, 1, 0.2f,  // 23
+            0.5f, -0.5f,  0.5f, 1, 0, 0.2f,  // 22
+            0.5f, -0.5f, -0.5f, 1, 1, 0.2f,  // 23
         ];
         
         IReadOnlyList<uint> indices =
         [
-             0,  1,  2, // front
-             0,  2,  3,
-             4,  5,  6, // back
-             4,  6,  7,
-             8,  9, 10, // right
-             8, 10, 11,
+            0,  1,  2, // front
+            0,  2,  3,
+            4,  5,  6, // back
+            4,  6,  7,
+            8,  9, 10, // right
+            8, 10, 11,
             12, 13, 14, // left
             12, 14, 15,
             16, 17, 18, // top
@@ -166,27 +183,31 @@ public static class Program
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
         _blockShaderProgram.SetUniform("textureSampler", 0);
-        _time += (float)deltaTime;
-        var rotationY = 0;//_time * 100 % 360;
-        float yPos = 0;
         Func<float, float> sin = it => float.Sin(float.DegreesToRadians(it));
         Func<float, float> cos = it => float.Cos(float.DegreesToRadians(it));
         _cameraFront = Vector3.Normalize
+        (
+            new Vector3
             (
-                new Vector3
-                (
-                    cos(_cameraYaw) * cos(_cameraPitch),
-                    sin(_cameraPitch),
-                    sin(_cameraYaw) * cos(_cameraPitch)
-                )
-            );
-        var model = Matrix4x4.CreateRotationY(float.DegreesToRadians(rotationY)) * Matrix4x4.CreateTranslation(0, yPos, -3f);
+                cos(_cameraYaw) * cos(_cameraPitch),
+                sin(_cameraPitch),
+                sin(_cameraYaw) * cos(_cameraPitch)
+            )
+        );
         var view = Matrix4x4.CreateLookAt(_cameraPosition, _cameraPosition + _cameraFront, _cameraUp);
         var projection = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), 1, 0.01f, 100f);
-        _blockShaderProgram.SetUniform("model", model);
         _blockShaderProgram.SetUniform("view", view);
         _blockShaderProgram.SetUniform("projection", projection);
-        _blockVao.Draw();
+        
+        for (int x = 0; x < ChunkSize; x++)
+        for (int y = 0; y < ChunkSize; y++)
+        for (int z = 0; z < ChunkSize; z++)
+        {
+            if (_chunk[x, y, z] == Block.Air) continue;
+            var model = Matrix4x4.CreateTranslation(x, y, z);
+            _blockShaderProgram.SetUniform("model", model);
+            _blockVao.Draw();
+        }
     }
     
     private static void ProcessInput(double deltaTime)
