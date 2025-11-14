@@ -3,7 +3,7 @@ using Silk.NET.OpenGL;
 
 namespace SilknetOpenglBlocks;
 
-public sealed class StaticModelVao
+public sealed class Vao
 {
     private readonly GL _gl;
     private readonly uint _id;
@@ -13,7 +13,7 @@ public sealed class StaticModelVao
     private int _vertexSize;
     private bool _useEbo;
 
-    public StaticModelVao(GL gl, IReadOnlyList<float> vertices, IReadOnlyList<int> vertexAttributeSizes, IReadOnlyList<uint> indices)
+    public Vao(GL gl, IReadOnlyList<float> vertices, IReadOnlyList<int> vertexAttributeSizes, IReadOnlyList<uint> indices)
     {
         _gl = gl;
         

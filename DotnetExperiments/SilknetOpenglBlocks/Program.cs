@@ -1,5 +1,7 @@
-﻿using System.Drawing;
+﻿using System.Collections.Immutable;
+using System.Drawing;
 using System.Numerics;
+using AwesomeAssertions;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
@@ -14,14 +16,14 @@ public static class Program
     private static GL _gl = null!;
     private static IInputContext _input = null!;
     private static ShaderProgram _blockShaderProgram = null!;
-    private static StaticModelVao _blockVao = null!;
+    private static Vao _chunkVao = null!;
     private static uint _blockTextureId;
-    private static Vector3 _cameraPosition = new(16, 40, 16);
-    private static Vector3 _cameraFront = new(0, 0, -1);
+    private static Vector3 _cameraPosition = new(20, 20, 20);
+    private static Vector3 _cameraFront = new(0, 0, 0);
     private static Vector3 _cameraUp = new(0, 1, 0);
     private static float _cameraPitch;
     private static float _cameraYaw = -90;
-    private const int ChunkSize = 64;
+    private const int ChunkSize = 32;
     private static Block[,,] _chunk = new Block[ChunkSize, ChunkSize, ChunkSize];
 
     private static void Main()
@@ -49,10 +51,15 @@ public static class Program
         {
             _chunk[x, y, z] = y switch
             {
-                < 32 => Block.Stone,
-                32 => Block.Dirt,
+                < 16 => Block.Stone,
+                16 => Block.Dirt,
                 _ => Block.Air
             };
+        }
+        
+        for (int y = 0; y < ChunkSize; y++)
+        {
+            _chunk[10, y, 10] = Block.Wood;
         }
     }
     
@@ -96,26 +103,26 @@ public static class Program
             -0.5f,  0.5f,  0.5f, 0, 0, 1.0f,  // 1
             0.5f,  0.5f,  0.5f, 1, 0, 1.0f,  // 2
             0.5f, -0.5f,  0.5f, 1, 1, 1.0f,  // 3
-            0.5f, -0.5f, -0.5f, 0, 1, 0.5f,  // 4 back
-            0.5f,  0.5f, -0.5f, 0, 0, 0.5f,  // 5
-            -0.5f,  0.5f, -0.5f, 1, 0, 0.5f,  // 6
-            -0.5f, -0.5f, -0.5f, 1, 1, 0.5f,  // 7
-            0.5f, -0.5f,  0.5f, 0, 1, 0.8f,  // 8 right
-            0.5f,  0.5f,  0.5f, 0, 0, 0.8f,  // 9
-            0.5f,  0.5f, -0.5f, 1, 0, 0.8f,  // 10
-            0.5f, -0.5f, -0.5f, 1, 1, 0.8f,  // 11
-            -0.5f, -0.5f, -0.5f, 0, 1, 0.6f,  // 12 left
-            -0.5f,  0.5f, -0.5f, 0, 0, 0.6f,  // 13
-            -0.5f,  0.5f,  0.5f, 1, 0, 0.6f,  // 14
-            -0.5f, -0.5f,  0.5f, 1, 1, 0.6f,  // 15
-            -0.5f,  0.5f,  0.5f, 0, 1, 0.9f,  // 16 top
-            -0.5f,  0.5f, -0.5f, 0, 0, 0.9f,  // 17
-            0.5f,  0.5f, -0.5f, 1, 0, 0.9f,  // 18
-            0.5f,  0.5f,  0.5f, 1, 1, 0.9f,  // 19
-            -0.5f, -0.5f, -0.5f, 0, 1, 0.2f,  // 20 bottom
-            -0.5f, -0.5f,  0.5f, 0, 0, 0.2f,  // 21
-            0.5f, -0.5f,  0.5f, 1, 0, 0.2f,  // 22
-            0.5f, -0.5f, -0.5f, 1, 1, 0.2f,  // 23
+            0.5f, -0.5f, -0.5f, 0, 1, 1.0f,  // 4 back
+            0.5f,  0.5f, -0.5f, 0, 0, 1.0f,  // 5
+            -0.5f,  0.5f, -0.5f, 1, 0, 1.0f,  // 6
+            -0.5f, -0.5f, -0.5f, 1, 1, 1.0f,  // 7
+            0.5f, -0.5f,  0.5f, 0, 1, 1.0f,  // 8 right
+            0.5f,  0.5f,  0.5f, 0, 0, 1.0f,  // 9
+            0.5f,  0.5f, -0.5f, 1, 0, 1.0f,  // 10
+            0.5f, -0.5f, -0.5f, 1, 1, 1.0f,  // 11
+            -0.5f, -0.5f, -0.5f, 0, 1, 1.0f,  // 12 left
+            -0.5f,  0.5f, -0.5f, 0, 0, 1.0f,  // 13
+            -0.5f,  0.5f,  0.5f, 1, 0, 1.0f,  // 14
+            -0.5f, -0.5f,  0.5f, 1, 1, 1.0f,  // 15
+            -0.5f,  0.5f,  0.5f, 0, 1, 1.0f,  // 16 top
+            -0.5f,  0.5f, -0.5f, 0, 0, 1.0f,  // 17
+            0.5f,  0.5f, -0.5f, 1, 0, 1.0f,  // 18
+            0.5f,  0.5f,  0.5f, 1, 1, 1.0f,  // 19
+            -0.5f, -0.5f, -0.5f, 0, 1, 1.0f,  // 20 bottom
+            -0.5f, -0.5f,  0.5f, 0, 0, 1.0f,  // 21
+            0.5f, -0.5f,  0.5f, 1, 0, 1.0f,  // 22
+            0.5f, -0.5f, -0.5f, 1, 1, 1.0f,  // 23
         ];
         
         IReadOnlyList<uint> indices =
@@ -136,7 +143,7 @@ public static class Program
         
         IReadOnlyList<int> vertexAttributeSizes = [3, 2, 1];
         
-        _blockVao = new StaticModelVao(_gl, vertices, vertexAttributeSizes, indices);
+        _chunkVao = new Vao(_gl, vertices, vertexAttributeSizes, indices);
     }
     
     private static unsafe void SetupBlockTexture()
@@ -186,28 +193,97 @@ public static class Program
         Func<float, float> sin = it => float.Sin(float.DegreesToRadians(it));
         Func<float, float> cos = it => float.Cos(float.DegreesToRadians(it));
         _cameraFront = Vector3.Normalize
-        (
-            new Vector3
             (
-                cos(_cameraYaw) * cos(_cameraPitch),
-                sin(_cameraPitch),
-                sin(_cameraYaw) * cos(_cameraPitch)
-            )
-        );
+                new Vector3
+                (
+                    cos(_cameraYaw) * cos(_cameraPitch),
+                    sin(_cameraPitch),
+                    sin(_cameraYaw) * cos(_cameraPitch)
+                )
+            );
+        var model = Matrix4x4.Identity;
         var view = Matrix4x4.CreateLookAt(_cameraPosition, _cameraPosition + _cameraFront, _cameraUp);
         var projection = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), 1, 0.01f, 100f);
+        _blockShaderProgram.SetUniform("model", model);
         _blockShaderProgram.SetUniform("view", view);
         _blockShaderProgram.SetUniform("projection", projection);
         
+        RenderChunk();
+    }
+    
+    private static readonly ImmutableDictionary<Direction, ImmutableList<Vector3D<float>>> FaceVertexPositionsByDirection =
+        new Dictionary<Direction, ImmutableList<Vector3D<float>>>
+        {
+            [Direction.Back] =
+                [new(-0.5f, -0.5f, 0.5f), new(-0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, -0.5f, 0.5f)],
+            [Direction.Forward] =
+                [new(0.5f, -0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, -0.5f, -0.5f)],
+            [Direction.Right] =
+                [new(0.5f, -0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, -0.5f, -0.5f)],
+            [Direction.Left] =
+                [new(-0.5f, -0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, 0.5f), new(-0.5f, -0.5f, 0.5f)],
+            [Direction.Up] =
+                [new(-0.5f, 0.5f, 0.5f), new(-0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, 0.5f)],
+            [Direction.Down] =
+                [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
+        }.ToImmutableDictionary();
+    
+    private static void RenderChunk()
+    {
+        const int cubeFaces = 6;
+        const int elementsPerCubeFace = 6;
+        const int verticesPerCubeFace = 4;
+        const int vertexSize = 6;
+        
+        List<float> vertices = [];
+        int faceCount = 0;
         for (int x = 0; x < ChunkSize; x++)
         for (int y = 0; y < ChunkSize; y++)
         for (int z = 0; z < ChunkSize; z++)
         {
             if (_chunk[x, y, z] == Block.Air) continue;
-            var model = Matrix4x4.CreateTranslation(x, y, z);
-            _blockShaderProgram.SetUniform("model", model);
-            _blockVao.Draw();
+            Vector3D<int> blockPos = new(x, y, z);
+            foreach (Direction direction in Direction.All)
+            {
+                Vector3D<int> neighborPos = blockPos + direction.IntUnitVector;
+                if (IsOpaqueBlockAt(neighborPos)) continue;
+                foreach ((Vector3D<float> pos, int i) in FaceVertexPositionsByDirection[direction].Select((p, i) => (p, i)))
+                {
+                    vertices.Add(x + pos.X);
+                    vertices.Add(y + pos.Y);
+                    vertices.Add(z + pos.Z);
+                    float u = i is 0 or 1 ? 0 : 1;
+                    float v = i is 0 or 3 ? 0 : 1;
+                    vertices.Add(u);
+                    vertices.Add(v);
+                    float light =
+                        direction == Direction.Forward ? 0.5f :
+                        direction == Direction.Back ? 0.9f :
+                        direction == Direction.Right ? 0.8f :
+                        direction == Direction.Left ? 0.6f :
+                        direction == Direction.Up ? 1.0f :
+                        direction == Direction.Down ? 0.2f :
+                        throw new ArgumentOutOfRangeException();
+                    vertices.Add(light);
+                }
+                faceCount++;
+            }
         }
+
+        uint[] elements = Enumerable.Repeat(new [] { 0, 1, 2, 0, 2, 3 }, faceCount)
+            .SelectMany((x, i) => x.Select(n => (uint)(n + i * verticesPerCubeFace)))
+            .ToArray();
+        
+        _chunkVao.Update(vertices, elements);
+        _chunkVao.Draw();
+    }
+    
+    private static bool IsOpaqueBlockAt(Vector3D<int> pos)
+    {
+        if (pos.X is < 0 or >= ChunkSize) return false;
+        if (pos.Y is < 0 or >= ChunkSize) return false;
+        if (pos.Z is < 0 or >= ChunkSize) return false;
+        return _chunk[pos.X, pos.Y, pos.Z] != Block.Air;
     }
     
     private static void ProcessInput(double deltaTime)
