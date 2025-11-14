@@ -252,8 +252,7 @@ public static class Program
                     vertices.Add(x + pos.X);
                     vertices.Add(y + pos.Y);
                     vertices.Add(z + pos.Z);
-                    float u = i is 0 or 1 ? 0 : 1;
-                    float v = i is 0 or 3 ? 0 : 1;
+                    (float u, float v) = GetVertexUv(_chunk[x, y, z], i);
                     vertices.Add(u);
                     vertices.Add(v);
                     float light =
@@ -276,6 +275,21 @@ public static class Program
         
         _chunkVao.Update(vertices, elements);
         _chunkVao.Draw();
+    }
+    
+    private static (float U, float V) GetVertexUv(Block block, int vertexIndex)
+    {
+        const int spriteSheetSizeInBlocks = 8;
+        const float textureSizeInUv = 1 / (float)spriteSheetSizeInBlocks;
+        int row = (int)block / spriteSheetSizeInBlocks;
+        int column = (int)block % spriteSheetSizeInBlocks;
+        float topLeftU = column * textureSizeInUv;
+        float topLeftV = row * textureSizeInUv;
+        float offsetFromTopLeftU = vertexIndex is 0 or 1 ? 0 : textureSizeInUv;
+        float offsetFromTopLeftV = vertexIndex is 1 or 2 ? 0 : textureSizeInUv;
+        float u = topLeftU + offsetFromTopLeftU;
+        float v = topLeftV + offsetFromTopLeftV;
+        return (u, v);
     }
     
     private static bool IsOpaqueBlockAt(Vector3D<int> pos)
