@@ -1,3 +1,5 @@
+using System.Numerics;
+using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
@@ -6,15 +8,25 @@ namespace SilknetOpenglBlocks;
 public sealed class Game
 {
     private readonly IWindow _window;
-    private Block[,,] _chunk = new Block[ChunkSize, ChunkSize, ChunkSize];
+    private readonly Camera _camera;
+    private readonly Block[,,] _chunk = new Block[ChunkSize, ChunkSize, ChunkSize];
+    private IInputContext _input = null!;
     
     public const int ChunkSize = 64;
 
-    public Game(IWindow window)
+    public Game(IWindow window, Camera camera)
     {
         _window = window;
+        _camera = camera;
+        
+        window.Load += OnLoad;
     }
-
+    
+    private void OnLoad()
+    {
+        InitChunk();
+    }
+    
     public void InitChunk()
     {
         for (int x = 0; x < ChunkSize; x++)

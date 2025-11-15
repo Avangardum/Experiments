@@ -8,7 +8,8 @@ WindowOptions options = WindowOptions.Default with
     Title = "Silk.NET OpenGL Blocks"
 };
 var window = Window.Create(options);
-Game game = new(window);
 Camera camera = new();
+Game game = new(window, camera);
 Renderer renderer = new(window, game, camera);
+InputHandler inputHandler = new(camera, window);
 window.Run();

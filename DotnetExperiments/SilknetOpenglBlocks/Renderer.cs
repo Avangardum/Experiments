@@ -15,7 +15,6 @@ public sealed class Renderer
     private readonly Game _game;
     private readonly Camera _camera;
     private GL _gl = null!;
-    private IInputContext _input = null!;
     private ShaderProgram _blockShaderProgram = null!;
     private Vao _chunkVao = null!;
     private uint _blockTextureId;
@@ -27,14 +26,11 @@ public sealed class Renderer
         _camera = camera;
 
         window.Load += OnLoad;
-        window.Update += OnUpdate;
         window.Render += OnRender;
     }
     
     private void OnLoad()
     {
-        _game.InitChunk();
-        SetupInput();
         _gl = _window.CreateOpenGL();
         _gl.ClearColor(Color.CornflowerBlue);
         _gl.Enable(EnableCap.DepthTest);
@@ -42,20 +38,6 @@ public sealed class Renderer
         SetupBlockVao();
         SetupBlockTexture();
         //_gl.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
-    }
-
-    private void SetupInput()
-    {
-        _input = _window.CreateInput();
-        foreach (IKeyboard keyboard in _input.Keyboards)
-        {
-            keyboard.KeyDown += OnKeyDown;
-        }
-        foreach (IMouse mouse in _input.Mice)
-        {
-            mouse.Cursor.CursorMode = CursorMode.Disabled;
-            mouse.MouseMove += OnMouseMove;
-        }
     }
     
     private void SetupShaders()
@@ -95,20 +77,9 @@ public sealed class Renderer
         _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
         _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
     }
-
-    private void OnKeyDown(IKeyboard keyboard, Key key, int keyCode)
-    {
-        if (key == Key.Escape) _window.Close();
-    }
-    
-    private void OnUpdate(double deltaTime)
-    {
-        
-    }
     
     private void OnRender(double deltaTime)
     {
-        ProcessInput(deltaTime);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
         _blockShaderProgram.SetUniform("textureSampler", 0);
@@ -202,30 +173,4 @@ public sealed class Renderer
         float v = topLeftV + offsetFromTopLeftV;
         return (u, v);
     }
-    
-    private void ProcessInput(double deltaTime)
-    {
-        const float speed = 4;
-        if (IsKeyPressed(Key.A)) _camera.Position -= Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * (float)deltaTime * speed; 
-        if (IsKeyPressed(Key.D)) _camera.Position += Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.W)) _camera.Position += _camera.Front * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.S)) _camera.Position -= _camera.Front * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.Space)) _camera.Position += _camera.Up * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.ShiftLeft)) _camera.Position -= _camera.Up * (float)deltaTime * speed;
-    }
-    
-    private Vector2? _lastMousePosition;
-    
-    private void OnMouseMove(IMouse mouse, Vector2 position)
-    {
-        _lastMousePosition ??= position;
-        Vector2 delta = position - _lastMousePosition.Value;
-        const float sensitivity = 0.05f;
-        _camera.YawDeg += delta.X * sensitivity;
-        _camera.PitchDeg -= delta.Y * sensitivity;
-        _camera.PitchDeg = float.Clamp(_camera.PitchDeg, -89, 89);
-        _lastMousePosition = position;
-    }
-    
-    private bool IsKeyPressed(Key key) => _input.Keyboards.Any(x => x.IsKeyPressed(key));
 }
