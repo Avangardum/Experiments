@@ -13,7 +13,7 @@ public sealed class Vao
     private int _vertexSize;
     private bool _useEbo;
 
-    public Vao(GL gl, IReadOnlyList<float> vertices, IReadOnlyList<int> vertexAttributeSizes, IReadOnlyList<uint> indices)
+    public Vao(GL gl, IReadOnlyList<float> vertices, IReadOnlyList<uint> indices, IReadOnlyList<int> vertexAttributeSizes)
     {
         _gl = gl;
         
@@ -47,7 +47,7 @@ public sealed class Vao
         _gl.BufferData<uint>(BufferTargetARB.ElementArrayBuffer, indices.ToArray(), BufferUsageARB.DynamicDraw);
         _useEbo = indices.Any();
         
-        _vertexCount = (uint)(_useEbo ? indices.Count : vertices.Count / _vertexSize);
+        _vertexCount = (uint)(_useEbo ? indices.Count : _vertexSize != 0 ? vertices.Count / _vertexSize : 0);
     }
     
     public unsafe void Draw()
