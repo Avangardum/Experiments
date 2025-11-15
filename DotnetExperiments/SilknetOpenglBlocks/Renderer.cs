@@ -11,29 +11,21 @@ namespace SilknetOpenglBlocks;
 
 public sealed class Renderer
 {
-    private readonly IWindow _window;
     private readonly Game _game;
     private readonly Camera _camera;
-    private GL _gl = null!;
+    private readonly GL _gl;
     private ShaderProgram _blockShaderProgram = null!;
     private Vao _chunkVao = null!;
     private uint _blockTextureId;
     
-    public Renderer(IWindow window, Game game, Camera camera)
+    public Renderer(GL gl, Game game, Camera camera)
     {
-        _window = window;
+        _gl = gl;
         _game = game;
         _camera = camera;
-
-        window.Load += OnLoad;
-        window.Render += OnRender;
-    }
-    
-    private void OnLoad()
-    {
-        _gl = _window.CreateOpenGL();
-        _gl.ClearColor(Color.CornflowerBlue);
-        _gl.Enable(EnableCap.DepthTest);
+        
+        gl.ClearColor(Color.CornflowerBlue);
+        gl.Enable(EnableCap.DepthTest);
         SetupShaders();
         SetupBlockVao();
         SetupBlockTexture();
@@ -77,8 +69,8 @@ public sealed class Renderer
         _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
         _gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
     }
-    
-    private void OnRender(double deltaTime)
+
+    public void Render(double deltaTime)
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
