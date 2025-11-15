@@ -9,5 +9,6 @@ WindowOptions options = WindowOptions.Default with
 };
 var window = Window.Create(options);
 Game game = new(window);
-Renderer renderer = new(window, game);
+Camera camera = new();
+Renderer renderer = new(window, game, camera);
 window.Run();

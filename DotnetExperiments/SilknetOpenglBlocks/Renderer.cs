@@ -13,22 +13,19 @@ public sealed class Renderer
 {
     private readonly IWindow _window;
     private readonly Game _game;
+    private readonly Camera _camera;
     private GL _gl = null!;
     private IInputContext _input = null!;
     private ShaderProgram _blockShaderProgram = null!;
     private Vao _chunkVao = null!;
     private uint _blockTextureId;
-    private Vector3 _cameraPosition = new(20, 20, 20);
-    private Vector3 _cameraFront = new(0, 0, 0);
-    private Vector3 _cameraUp = new(0, 1, 0);
-    private float _cameraPitch;
-    private float _cameraYaw = -90;
     
-    public Renderer(IWindow window, Game game)
+    public Renderer(IWindow window, Game game, Camera camera)
     {
         _window = window;
         _game = game;
-        
+        _camera = camera;
+
         window.Load += OnLoad;
         window.Update += OnUpdate;
         window.Render += OnRender;
@@ -115,19 +112,8 @@ public sealed class Renderer
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         _blockShaderProgram.Use();
         _blockShaderProgram.SetUniform("textureSampler", 0);
-        Func<float, float> sin = it => float.Sin(float.DegreesToRadians(it));
-        Func<float, float> cos = it => float.Cos(float.DegreesToRadians(it));
-        _cameraFront = Vector3.Normalize
-            (
-                new Vector3
-                (
-                    cos(_cameraYaw) * cos(_cameraPitch),
-                    sin(_cameraPitch),
-                    sin(_cameraYaw) * cos(_cameraPitch)
-                )
-            );
         var model = Matrix4x4.Identity;
-        var view = Matrix4x4.CreateLookAt(_cameraPosition, _cameraPosition + _cameraFront, _cameraUp);
+        var view = _camera.ViewMatrix;
         var projection = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), 1, 0.01f, 100f);
         _blockShaderProgram.SetUniform("model", model);
         _blockShaderProgram.SetUniform("view", view);
@@ -220,12 +206,12 @@ public sealed class Renderer
     private void ProcessInput(double deltaTime)
     {
         const float speed = 4;
-        if (IsKeyPressed(Key.A)) _cameraPosition -= Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp)) * (float)deltaTime * speed; 
-        if (IsKeyPressed(Key.D)) _cameraPosition += Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp)) * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.W)) _cameraPosition += _cameraFront * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.S)) _cameraPosition -= _cameraFront * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.Space)) _cameraPosition += Vector3.UnitY * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.ShiftLeft)) _cameraPosition -= Vector3.UnitY * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.A)) _camera.Position -= Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * (float)deltaTime * speed; 
+        if (IsKeyPressed(Key.D)) _camera.Position += Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.W)) _camera.Position += _camera.Front * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.S)) _camera.Position -= _camera.Front * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.Space)) _camera.Position += _camera.Up * (float)deltaTime * speed;
+        if (IsKeyPressed(Key.ShiftLeft)) _camera.Position -= _camera.Up * (float)deltaTime * speed;
     }
     
     private Vector2? _lastMousePosition;
@@ -235,9 +221,9 @@ public sealed class Renderer
         _lastMousePosition ??= position;
         Vector2 delta = position - _lastMousePosition.Value;
         const float sensitivity = 0.05f;
-        _cameraYaw += delta.X * sensitivity;
-        _cameraPitch -= delta.Y * sensitivity;
-        _cameraPitch = float.Clamp(_cameraPitch, -89, 89);
+        _camera.YawDeg += delta.X * sensitivity;
+        _camera.PitchDeg -= delta.Y * sensitivity;
+        _camera.PitchDeg = float.Clamp(_camera.PitchDeg, -89, 89);
         _lastMousePosition = position;
     }
     

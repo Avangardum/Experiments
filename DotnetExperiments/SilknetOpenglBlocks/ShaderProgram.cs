@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
 namespace SilknetOpenglBlocks;
@@ -88,6 +90,11 @@ public class ShaderProgram : IDisposable
     }
     
     public unsafe void SetUniform(string name, Matrix4x4 value)
+    {
+        _gl.UniformMatrix4(GetUniformLocation(name), 1, false, (float*)&value);
+    }
+    
+    public unsafe void SetUniform(string name, Matrix4X4<float> value)
     {
         _gl.UniformMatrix4(GetUniformLocation(name), 1, false, (float*)&value);
     }
