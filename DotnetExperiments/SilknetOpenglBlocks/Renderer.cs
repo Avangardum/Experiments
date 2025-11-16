@@ -46,7 +46,7 @@ public sealed class Renderer
     {
         _chunkVao = new Vao(_gl);
         _chunkVao.SetVertexAttributeSizes([3, 2, 1]);
-        const int MaxFacesInChunk = Game.ChunkSize * Game.ChunkSize * Game.ChunkSize * CubeFaces;
+        const int MaxFacesInChunk = Chunk.Volume * CubeFaces;
         ImmutableList<uint> elements = Enumerable.Repeat(new [] { 0, 1, 2, 0, 2, 3 }, MaxFacesInChunk)
             .SelectMany((x, i) => x.Select(n => (uint)(n + i * VerticesPerCubeFace)))
             .ToImmutableList();
@@ -88,12 +88,13 @@ public sealed class Renderer
         _blockShaderProgram.SetUniform("textureSampler", 0);
         var model = Matrix4x4.Identity;
         var view = _camera.ViewMatrix;
-        var projection = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), 1, 0.01f, 100f);
+        var projection = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView: float.DegreesToRadians(90),
+            aspectRatio: 1, nearPlaneDistance: 0.01f, farPlaneDistance: 100f);
         _blockShaderProgram.SetUniform("model", model);
         _blockShaderProgram.SetUniform("view", view);
         _blockShaderProgram.SetUniform("projection", projection);
         
-        RenderChunk();
+        RenderChunk(_game.Chunk);
         
         HandleGlErrors();
     }
@@ -122,20 +123,14 @@ public sealed class Renderer
                 [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
         }.ToImmutableDictionary();
     
-    private float[] _vertices =
-        new float[Game.ChunkSize * Game.ChunkSize * Game.ChunkSize * CubeFaces * VerticesPerCubeFace * VertexSize];
+    private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
     
-    private void RenderChunk()
+    private void RenderChunk(Chunk chunk)
     {
         int verticesNextIndex = 0;
         int faceCount = 0;
-        for (int x = 0; x < Game.ChunkSize; x++)
-        for (int y = 0; y < Game.ChunkSize; y++)
-        for (int z = 0; z < Game.ChunkSize; z++)
+        chunk.ForEachVisibleBlock((block, blockPos) =>
         {
-            Block block = _game.BlockAt(x, y, z);
-            if (block == Block.Air) continue;
-            Vector3D<int> blockPos = new(x, y, z);
             foreach (Direction direction in Direction.All)
             {
                 Vector3D<int> neighborPos = blockPos + direction.IntUnitVector;
@@ -143,26 +138,18 @@ public sealed class Renderer
                 ImmutableList<Vector3D<float>> vertexPositions = FaceVertexPositionsByDirection[direction];
                 for (int i = 0; i < vertexPositions.Count; i++)
                 {
-                    Vector3D<float> pos = vertexPositions[i];
-                    _vertices[verticesNextIndex++] = x + pos.X;
-                    _vertices[verticesNextIndex++] = y + pos.Y;
-                    _vertices[verticesNextIndex++] = z + pos.Z;
+                    Vector3D<float> vertexPos = vertexPositions[i];
+                    _vertices[verticesNextIndex++] = blockPos.X + vertexPos.X;
+                    _vertices[verticesNextIndex++] = blockPos.Y + vertexPos.Y;
+                    _vertices[verticesNextIndex++] = blockPos.Z + vertexPos.Z;
                     (float u, float v) = GetVertexUv(block, i);
                     _vertices[verticesNextIndex++] = u;
                     _vertices[verticesNextIndex++] = v;
-                    float light =
-                        direction == Direction.Forward ? 0.5f :
-                        direction == Direction.Back ? 0.9f :
-                        direction == Direction.Right ? 0.8f :
-                        direction == Direction.Left ? 0.6f :
-                        direction == Direction.Up ? 1.0f :
-                        direction == Direction.Down ? 0.2f :
-                        throw new ArgumentOutOfRangeException();
-                    _vertices[verticesNextIndex++] = light;
+                    _vertices[verticesNextIndex++] = direction.GetLightLevel();
                 }
                 faceCount++;
             }
-        }
+        });
         
         _chunkVao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
         _chunkVao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);

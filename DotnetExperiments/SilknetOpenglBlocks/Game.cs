@@ -5,10 +5,8 @@ namespace SilknetOpenglBlocks;
 
 public sealed class Game
 {
-    private readonly Block[,,] _chunk = new Block[ChunkSize, ChunkSize, ChunkSize];
+    public Chunk Chunk { get; } = new();
     private IInputContext _input = null!;
-    
-    public const int ChunkSize = 64;
     
     public Game()
     {
@@ -17,11 +15,11 @@ public sealed class Game
 
     private void InitChunk()
     {
-        for (int x = 0; x < ChunkSize; x++)
-        for (int y = 0; y < ChunkSize; y++)
-        for (int z = 0; z < ChunkSize; z++)
+        for (int x = 0; x < Chunk.Size; x++)
+        for (int y = 0; y < Chunk.Size; y++)
+        for (int z = 0; z < Chunk.Size; z++)
         {
-            _chunk[x, y, z] = y switch
+            Chunk[x, y, z] = y switch
             {
                 < 16 => Block.Stone,
                 16 => Block.Dirt,
@@ -29,18 +27,18 @@ public sealed class Game
             };
         }
         
-        for (int y = 0; y < ChunkSize; y++)
+        for (int y = 0; y < Chunk.Size; y++)
         {
-            _chunk[10, y, 10] = Block.Wood;
+            Chunk[10, y, 10] = Block.Wood;
         }
     }
 
     public Block BlockAt(int x, int y, int z)
     {
-        if (x is < 0 or >= ChunkSize) return Block.Air;
-        if (y is < 0 or >= ChunkSize) return Block.Air;
-        if (z is < 0 or >= ChunkSize) return Block.Air;
-        return _chunk[x, y, z];
+        if (x is < 0 or >= Chunk.Size) return Block.Air;
+        if (y is < 0 or >= Chunk.Size) return Block.Air;
+        if (z is < 0 or >= Chunk.Size) return Block.Air;
+        return Chunk[x, y, z];
     }
 
     public Block BlockAt(Vector3D<int> position) => BlockAt(position.X, position.Y, position.Z);
