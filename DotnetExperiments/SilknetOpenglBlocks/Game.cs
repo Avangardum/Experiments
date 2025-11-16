@@ -5,21 +5,24 @@ namespace SilknetOpenglBlocks;
 
 public sealed class Game
 {
-    public Chunk Chunk { get; } = new();
-    private IInputContext _input = null!;
-    
-    public Game()
+    private Dictionary<Vector3D<int>, Chunk> _chunks = [];
+
+    public Chunk GetChunk(Vector3D<int> index)
     {
-        InitChunk();
+        if (!_chunks.ContainsKey(index)) GenerateChunk(index);
+        return _chunks[index];
     }
 
-    private void InitChunk()
+    private void GenerateChunk(Vector3D<int> index)
     {
+        Chunk chunk = new(index);
+        _chunks[index] = chunk;
+        
         for (int x = 0; x < Chunk.Size; x++)
         for (int y = 0; y < Chunk.Size; y++)
         for (int z = 0; z < Chunk.Size; z++)
         {
-            Chunk[x, y, z] = y switch
+            chunk[x, y, z] = y switch
             {
                 < 16 => Block.Stone,
                 16 => Block.Dirt,
@@ -29,17 +32,19 @@ public sealed class Game
         
         for (int y = 0; y < Chunk.Size; y++)
         {
-            Chunk[10, y, 10] = Block.Wood;
+            chunk[10, y, 10] = Block.Wood;
         }
     }
 
-    public Block BlockAt(int x, int y, int z)
-    {
-        if (x is < 0 or >= Chunk.Size) return Block.Air;
-        if (y is < 0 or >= Chunk.Size) return Block.Air;
-        if (z is < 0 or >= Chunk.Size) return Block.Air;
-        return Chunk[x, y, z];
-    }
+    public Block BlockAt(int x, int y, int z) => BlockAt(new Vector3D<int>(x, y, z));
 
-    public Block BlockAt(Vector3D<int> position) => BlockAt(position.X, position.Y, position.Z);
+    public Block BlockAt(Vector3D<int> pos)
+    {
+        Vector3D<int> chunkIndex = pos / Chunk.Size;
+        Vector3D<int> posInChunk = pos.Remainder(Chunk.Size);
+        if (posInChunk.X < 0) posInChunk.X += Chunk.Size;
+        if (posInChunk.Y < 0) posInChunk.Y += Chunk.Size;
+        if (posInChunk.Z < 0) posInChunk.Z += Chunk.Size;
+        return GetChunk(chunkIndex)[posInChunk];
+    }
 }

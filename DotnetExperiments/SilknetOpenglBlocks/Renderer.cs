@@ -14,7 +14,7 @@ public sealed class Renderer
     private readonly Game _game;
     private readonly Camera _camera;
     private readonly GL _gl;
-    private ShaderProgram _blockShaderProgram = null!;
+    private ShaderProgram _chunkShaderProgram = null!;
     private Vao _chunkVao = null!;
     private uint _blockTextureId;
     
@@ -39,7 +39,7 @@ public sealed class Renderer
     
     private void SetupShaders()
     {
-        _blockShaderProgram = new ShaderProgram(_gl, "Block");
+        _chunkShaderProgram = new ShaderProgram(_gl, "Block");
     }
     
     private void SetupBlockVao()
@@ -84,19 +84,39 @@ public sealed class Renderer
     public void Render(double deltaTime)
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        _blockShaderProgram.Use();
-        _blockShaderProgram.SetUniform("textureSampler", 0);
+        _chunkShaderProgram.Use();
+        _chunkShaderProgram.SetUniform("textureSampler", 0);
         var model = Matrix4x4.Identity;
         var view = _camera.ViewMatrix;
         var projection = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView: float.DegreesToRadians(90),
-            aspectRatio: 1, nearPlaneDistance: 0.01f, farPlaneDistance: 100f);
-        _blockShaderProgram.SetUniform("model", model);
-        _blockShaderProgram.SetUniform("view", view);
-        _blockShaderProgram.SetUniform("projection", projection);
+            aspectRatio: 1, nearPlaneDistance: 0.01f, farPlaneDistance: 10_000f);
+        _chunkShaderProgram.SetUniform("model", model);
+        _chunkShaderProgram.SetUniform("view", view);
+        _chunkShaderProgram.SetUniform("projection", projection);
         
-        RenderChunk(_game.Chunk);
+        RenderChunks();
         
         HandleGlErrors();
+    }
+    
+    private void RenderChunks()
+    {
+        const int renderDistance = 1;
+        Vector3D<int> currentChunkIndex = Chunk.PosToChunkIndex(_camera.Position);
+        Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
+        Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
+        ForXyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
+        {
+            RenderChunk(_game.GetChunk(chunkIndex));
+        });
+    }
+    
+    private void ForXyzInclusive(Vector3D<int> start, Vector3D<int> end, Action<Vector3D<int>> func)
+    {
+        for (int x = start.X; x <= end.X; x++)
+        for (int y = start.Y; y <= end.Y; y++)
+        for (int z = start.Z; z <= end.Z; z++)
+            func(new Vector3D<int>(x, y, z));
     }
     
     private void HandleGlErrors()
@@ -129,7 +149,7 @@ public sealed class Renderer
     {
         int verticesNextIndex = 0;
         int faceCount = 0;
-        chunk.ForEachVisibleBlock((block, blockPos) =>
+        chunk.ForEachVisibleBlock((block, blockPos) => // TODO wrong, blockPos is actually the in chunk position
         {
             foreach (Direction direction in Direction.All)
             {
@@ -153,6 +173,7 @@ public sealed class Renderer
         
         _chunkVao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
         _chunkVao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
+        _chunkShaderProgram.SetUniform("model", chunk.ModelMatrix);
         _chunkVao.Draw();
     }
     
