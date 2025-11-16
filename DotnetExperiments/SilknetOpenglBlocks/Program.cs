@@ -22,7 +22,8 @@ IWindow CreateWindow()
     return Window.Create(WindowOptions.Default with
     {
         Size = new Vector2D<int>(1200, 1200),
-        Title = "Silk.NET OpenGL Blocks"
+        Title = "Silk.NET OpenGL Blocks",
+        VSync = false
     });
 }
 

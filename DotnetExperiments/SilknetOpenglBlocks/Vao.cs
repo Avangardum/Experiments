@@ -44,10 +44,12 @@ public sealed class Vao
         _areVertexAttributeSizesSet = true;
     }
     
-    public void SetVertices(IReadOnlyList<float> vertices)
+    public void SetVertices(IReadOnlyList<float> vertices) => SetVertices(vertices.ToArray().AsSpan());
+    
+    public void SetVertices(ReadOnlySpan<float> vertices)
     {
         _gl.BindVertexArray(_id);
-        _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, vertices.ToArray(), BufferUsageARB.DynamicDraw);
+        _gl.BufferData(BufferTargetARB.ArrayBuffer, vertices, BufferUsageARB.DynamicDraw);
         _areVerticesSet = true;
     }
     
