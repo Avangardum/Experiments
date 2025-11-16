@@ -149,19 +149,20 @@ public sealed class Renderer
     {
         int verticesNextIndex = 0;
         int faceCount = 0;
-        chunk.ForEachVisibleBlock((block, blockPos) => // TODO wrong, blockPos is actually the in chunk position
+        chunk.ForEachVisibleBlock((block, blockPosInChunk) =>
         {
+            Vector3D<int> blockPosInWorld = Chunk.Size * chunk.Index + blockPosInChunk;
             foreach (Direction direction in Direction.All)
             {
-                Vector3D<int> neighborPos = blockPos + direction.IntUnitVector;
+                Vector3D<int> neighborPos = blockPosInWorld + direction.IntUnitVector;
                 if (_game.BlockAt(neighborPos).IsOpaque()) continue;
                 ImmutableList<Vector3D<float>> vertexPositions = FaceVertexPositionsByDirection[direction];
                 for (int i = 0; i < vertexPositions.Count; i++)
                 {
                     Vector3D<float> vertexPos = vertexPositions[i];
-                    _vertices[verticesNextIndex++] = blockPos.X + vertexPos.X;
-                    _vertices[verticesNextIndex++] = blockPos.Y + vertexPos.Y;
-                    _vertices[verticesNextIndex++] = blockPos.Z + vertexPos.Z;
+                    _vertices[verticesNextIndex++] = blockPosInWorld.X + vertexPos.X;
+                    _vertices[verticesNextIndex++] = blockPosInWorld.Y + vertexPos.Y;
+                    _vertices[verticesNextIndex++] = blockPosInWorld.Z + vertexPos.Z;
                     (float u, float v) = GetVertexUv(block, i);
                     _vertices[verticesNextIndex++] = u;
                     _vertices[verticesNextIndex++] = v;
@@ -173,7 +174,6 @@ public sealed class Renderer
         
         _chunkVao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
         _chunkVao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
-        _chunkShaderProgram.SetUniform("model", chunk.ModelMatrix);
         _chunkVao.Draw();
     }
     

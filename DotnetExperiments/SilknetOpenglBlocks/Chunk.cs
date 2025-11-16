@@ -45,8 +45,6 @@ public sealed class Chunk(Vector3D<int> index)
         }
     }
     
-    public Matrix4X4<float> ModelMatrix => Matrix4X4.CreateTranslation(index.As<float>() * Size);
-
     public static Vector3D<int> PosToChunkIndex(Vector3D<float> position)
     {
         Vector3D<int> index = position.As<int>() / Size;
