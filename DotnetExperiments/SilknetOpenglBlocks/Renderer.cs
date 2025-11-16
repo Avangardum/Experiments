@@ -15,8 +15,8 @@ public sealed class Renderer
     private readonly Camera _camera;
     private readonly GL _gl;
     private ShaderProgram _chunkShaderProgram = null!;
-    private Vao _chunkVao = null!;
     private uint _blockTextureId;
+    private uint _chunkEboId;
     
     private const int ElementsPerCubeFace = 6;
     private const int CubeFaces = 6;
@@ -32,7 +32,7 @@ public sealed class Renderer
         gl.ClearColor(Color.CornflowerBlue);
         gl.Enable(EnableCap.DepthTest);
         SetupShaders();
-        SetupBlockVao();
+        SetupChunkEbo();
         SetupBlockTexture();
         //_gl.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
     }
@@ -42,15 +42,14 @@ public sealed class Renderer
         _chunkShaderProgram = new ShaderProgram(_gl, "Block");
     }
     
-    private void SetupBlockVao()
+    private void SetupChunkEbo()
     {
-        _chunkVao = new Vao(_gl);
-        _chunkVao.SetVertexAttributeSizes([3, 2, 1]);
-        const int MaxFacesInChunk = Chunk.Volume * CubeFaces;
-        ImmutableList<uint> elements = Enumerable.Repeat(new [] { 0, 1, 2, 0, 2, 3 }, MaxFacesInChunk)
+        uint[] elements = Enumerable.Repeat(new [] { 0, 1, 2, 0, 2, 3 }, Chunk.Volume * CubeFaces)
             .SelectMany((x, i) => x.Select(n => (uint)(n + i * VerticesPerCubeFace)))
-            .ToImmutableList();
-        _chunkVao.SetElements(elements);
+            .ToArray();
+        _chunkEboId = _gl.GenBuffer();
+        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _chunkEboId);
+        _gl.BufferData<uint>(BufferTargetARB.ElementArrayBuffer, elements, BufferUsageARB.StaticDraw);
     }
     
     private unsafe void SetupBlockTexture()
@@ -172,6 +171,9 @@ public sealed class Renderer
             }
         });
         
+        Vao _chunkVao = new(_gl);
+        _chunkVao.SetElements(_chunkEboId);
+        _chunkVao.SetVertexAttributeSizes([3, 2, 1]);
         _chunkVao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
         _chunkVao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
         _chunkVao.Draw();

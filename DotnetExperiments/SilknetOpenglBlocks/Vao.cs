@@ -60,6 +60,14 @@ public sealed class Vao
         _useEbo = elements.Any();
     }
     
+    public void SetElements(uint eboId)
+    {
+        _gl.BindVertexArray(_id);
+        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, eboId);
+        _eboId = eboId;
+        _useEbo = eboId > 0;
+    }
+    
     public void SetVertexCount(uint count) => _vertexCount = count;
     
     public unsafe void Draw()
