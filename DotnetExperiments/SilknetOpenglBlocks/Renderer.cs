@@ -18,6 +18,10 @@ public sealed class Renderer
     private Vao _chunkVao = null!;
     private uint _blockTextureId;
     
+    private const int ElementsPerCubeFace = 6;
+    private const int CubeFaces = 6;
+    private const int VerticesPerCubeFace = 4;
+    
     public Renderer(GL gl, Game game, Camera camera)
     {
         _gl = gl;
@@ -39,7 +43,13 @@ public sealed class Renderer
     
     private void SetupBlockVao()
     {
-        _chunkVao = new Vao(_gl, [], [], [3, 2, 1]);
+        _chunkVao = new Vao(_gl);
+        _chunkVao.SetVertexAttributeSizes([3, 2, 1]);
+        const int MaxFacesInChunk = Game.ChunkSize * Game.ChunkSize * Game.ChunkSize * CubeFaces;
+        ImmutableList<uint> elements = Enumerable.Repeat(new [] { 0, 1, 2, 0, 2, 3 }, MaxFacesInChunk)
+            .SelectMany((x, i) => x.Select(n => (uint)(n + i * VerticesPerCubeFace)))
+            .ToImmutableList();
+        _chunkVao.SetElements(elements);
     }
     
     private unsafe void SetupBlockTexture()
@@ -83,6 +93,15 @@ public sealed class Renderer
         _blockShaderProgram.SetUniform("projection", projection);
         
         RenderChunk();
+        
+        HandleGlErrors();
+    }
+    
+    private void HandleGlErrors()
+    {
+        GLEnum error = _gl.GetError();
+        if (error == GLEnum.NoError) return;
+        Console.WriteLine($"OpenGL error {error}.");
     }
     
     private readonly ImmutableDictionary<Direction, ImmutableList<Vector3D<float>>> FaceVertexPositionsByDirection =
@@ -104,11 +123,6 @@ public sealed class Renderer
     
     private void RenderChunk()
     {
-        const int cubeFaces = 6;
-        const int elementsPerCubeFace = 6;
-        const int verticesPerCubeFace = 4;
-        const int vertexSize = 6;
-        
         List<float> vertices = [];
         int faceCount = 0;
         for (int x = 0; x < Game.ChunkSize; x++)
@@ -142,12 +156,9 @@ public sealed class Renderer
                 faceCount++;
             }
         }
-
-        uint[] elements = Enumerable.Repeat(new [] { 0, 1, 2, 0, 2, 3 }, faceCount)
-            .SelectMany((x, i) => x.Select(n => (uint)(n + i * verticesPerCubeFace)))
-            .ToArray();
         
-        _chunkVao.Update(vertices, elements);
+        _chunkVao.SetVertices(vertices);
+        _chunkVao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
         _chunkVao.Draw();
     }
     
