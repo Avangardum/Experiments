@@ -60,9 +60,9 @@ public sealed class Chunk(Vector3D<int> index)
     public static Vector3D<int> WorldPosToChunkPos(Vector3D<int> worldPos)
     {
         Vector3D<int> chunkPos = worldPos.Remainder(Size);
-        if (chunkPos.X < 0) chunkPos.X += 1;
-        if (chunkPos.Y < 0) chunkPos.Y += 1;
-        if (chunkPos.Z < 0) chunkPos.Z += 1;
+        if (chunkPos.X < 0) chunkPos.X += Size;
+        if (chunkPos.Y < 0) chunkPos.Y += Size;
+        if (chunkPos.Z < 0) chunkPos.Z += Size;
         return chunkPos;
     }
 }
