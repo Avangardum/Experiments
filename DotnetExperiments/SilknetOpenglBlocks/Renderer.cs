@@ -100,7 +100,7 @@ public sealed class Renderer
     
     private void RenderChunks()
     {
-        const int renderDistance = 1;
+        const int renderDistance = 5;
         Vector3D<int> currentChunkIndex = Chunk.PosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
@@ -144,13 +144,22 @@ public sealed class Renderer
     
     private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
     
+    private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
+    
     private void RenderChunk(Chunk chunk)
+    {
+        ChunkRenderState renderState = GetChunkRenderState(chunk);
+        if (renderState.ShouldRecalcVertices) RecalcChunkVertices(renderState);
+        renderState.Vao.Draw();
+    }
+    
+    private void RecalcChunkVertices(ChunkRenderState renderState)
     {
         int verticesNextIndex = 0;
         int faceCount = 0;
-        chunk.ForEachVisibleBlock((block, blockPosInChunk) =>
+        renderState.Chunk.ForEachVisibleBlock((block, blockPosInChunk) =>
         {
-            Vector3D<int> blockPosInWorld = Chunk.Size * chunk.Index + blockPosInChunk;
+            Vector3D<int> blockPosInWorld = Chunk.Size * renderState.Chunk.Index + blockPosInChunk;
             foreach (Direction direction in Direction.All)
             {
                 Vector3D<int> neighborPos = blockPosInWorld + direction.IntUnitVector;
@@ -170,13 +179,30 @@ public sealed class Renderer
                 faceCount++;
             }
         });
-        
-        Vao _chunkVao = new(_gl);
-        _chunkVao.SetElements(_chunkEboId);
-        _chunkVao.SetVertexAttributeSizes([3, 2, 1]);
-        _chunkVao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
-        _chunkVao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
-        _chunkVao.Draw();
+            
+        renderState.Vao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
+        renderState.Vao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
+        renderState.ShouldRecalcVertices = false;
+    }
+    
+    private ChunkRenderState GetChunkRenderState(Chunk chunk)
+    {
+        if (_chunkRenderStates.TryGetValue(chunk, out ChunkRenderState? renderState)) return renderState;
+        renderState = CreateChunkRenderState(chunk);
+        _chunkRenderStates[chunk] = renderState;
+        return renderState;
+    }
+    
+    private ChunkRenderState CreateChunkRenderState(Chunk chunk)
+    {
+        Vao vao = new(_gl);
+        vao.SetElements(_chunkEboId);
+        vao.SetVertexAttributeSizes([3, 2, 1]);
+        return new ChunkRenderState
+        {
+            Chunk = chunk,
+            Vao = vao
+        };
     }
     
     private (float U, float V) GetVertexUv(Block block, int vertexIndex)
