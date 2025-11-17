@@ -19,11 +19,13 @@ public sealed class Game
     {
         Chunk chunk = new(index);
         
+        int chunkYOffset = index.Y * Chunk.Size;
+        
         for (int x = 0; x < Chunk.Size; x++)
         for (int y = 0; y < Chunk.Size; y++)
         for (int z = 0; z < Chunk.Size; z++)
         {
-            int worldY = index.Y * Chunk.Size + y;
+            int worldY = chunkYOffset + y;
             chunk[x, y, z] = worldY switch
             {
                 < 16 => Block.Stone,
