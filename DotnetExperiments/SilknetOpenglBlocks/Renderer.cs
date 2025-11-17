@@ -101,7 +101,7 @@ public sealed class Renderer
     private void RenderChunks()
     {
         const int renderDistance = 5;
-        Vector3D<int> currentChunkIndex = Chunk.PosToChunkIndex(_camera.Position);
+        Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
         ForXyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
@@ -155,6 +155,7 @@ public sealed class Renderer
     
     private void RecalcChunkVertices(ChunkRenderState renderState)
     {
+        // TODO simplify
         int verticesNextIndex = 0;
         int faceCount = 0;
         renderState.Chunk.ForEachVisibleBlock((block, blockPosInChunk) =>

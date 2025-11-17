@@ -9,20 +9,22 @@ public sealed class Game
 
     public Chunk GetChunk(Vector3D<int> index)
     {
-        if (!_chunks.ContainsKey(index)) GenerateChunk(index);
-        return _chunks[index];
+        if (_chunks.TryGetValue(index, out Chunk? chunk)) return chunk;
+        chunk = GenerateChunk(index);
+        _chunks[index] = chunk;
+        return chunk;
     }
 
-    private void GenerateChunk(Vector3D<int> index)
+    private Chunk GenerateChunk(Vector3D<int> index)
     {
         Chunk chunk = new(index);
-        _chunks[index] = chunk;
         
         for (int x = 0; x < Chunk.Size; x++)
         for (int y = 0; y < Chunk.Size; y++)
         for (int z = 0; z < Chunk.Size; z++)
         {
-            chunk[x, y, z] = y switch
+            int worldY = index.Y * Chunk.Size + y;
+            chunk[x, y, z] = worldY switch
             {
                 < 16 => Block.Stone,
                 16 => Block.Dirt,
@@ -34,14 +36,16 @@ public sealed class Game
         {
             chunk[10, y, 10] = Block.Wood;
         }
+        
+        return chunk;
     }
 
     public Block BlockAt(int x, int y, int z) => BlockAt(new Vector3D<int>(x, y, z));
 
-    public Block BlockAt(Vector3D<int> pos)
+    public Block BlockAt(Vector3D<int> worldPos)
     {
-        Vector3D<int> chunkIndex = pos / Chunk.Size;
-        Vector3D<int> posInChunk = pos.Remainder(Chunk.Size);
+        Vector3D<int> chunkIndex = Chunk.WorldPosToChunkIndex(worldPos);
+        Vector3D<int> posInChunk = Chunk.WorldPosToChunkPos(worldPos);
         if (posInChunk.X < 0) posInChunk.X += Chunk.Size;
         if (posInChunk.Y < 0) posInChunk.Y += Chunk.Size;
         if (posInChunk.Z < 0) posInChunk.Z += Chunk.Size;

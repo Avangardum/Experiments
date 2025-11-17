@@ -14,6 +14,7 @@ public sealed class Vao
     private bool _useEbo;
     private bool _areVertexAttributeSizesSet;
     private bool _areVerticesSet;
+    private bool _isVertexCountSet;
 
     public Vao(GL gl)
     {
@@ -68,13 +69,18 @@ public sealed class Vao
         _useEbo = eboId > 0;
     }
     
-    public void SetVertexCount(uint count) => _vertexCount = count;
-    
+    public void SetVertexCount(uint count)
+    {
+        _vertexCount = count;
+        _isVertexCountSet = true;
+    }
+
     public unsafe void Draw()
     {
         if (!_areVerticesSet) throw new InvalidOperationException("Vertices are not set.");
         if (!_areVertexAttributeSizesSet) throw new InvalidOperationException("Vertex attribute sizes are not set");
-        if (_vertexCount == 0) throw new InvalidOperationException("Vertex count is not set");
+        if (!_isVertexCountSet) throw new InvalidOperationException("Vertex count is not set");
+        if (_vertexCount == 0) return;
         
         _gl.BindVertexArray(_id);
         if (_useEbo) _gl.DrawElements(PrimitiveType.Triangles, _vertexCount, DrawElementsType.UnsignedInt, null);

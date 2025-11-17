@@ -45,12 +45,24 @@ public sealed class Chunk(Vector3D<int> index)
         }
     }
     
-    public static Vector3D<int> PosToChunkIndex(Vector3D<float> position)
+    public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos)
     {
-        Vector3D<int> index = position.As<int>() / Size;
-        if (position.X < 0) index.X--;
-        if (position.Y < 0) index.Y--;
-        if (position.Z < 0) index.Z--;
+        Vector3D<int> index = worldPos / Size;
+        if (worldPos.X < 0) index.X--;
+        if (worldPos.Y < 0) index.Y--;
+        if (worldPos.Z < 0) index.Z--;
         return index;
+    }
+    
+    public static Vector3D<int> WorldPosToChunkIndex(Vector3D<float> worldPos) =>
+        WorldPosToChunkIndex(worldPos.As<int>());
+    
+    public static Vector3D<int> WorldPosToChunkPos(Vector3D<int> worldPos)
+    {
+        Vector3D<int> chunkPos = worldPos.Remainder(Size);
+        if (chunkPos.X < 0) chunkPos.X += 1;
+        if (chunkPos.Y < 0) chunkPos.Y += 1;
+        if (chunkPos.Z < 0) chunkPos.Z += 1;
+        return chunkPos;
     }
 }
