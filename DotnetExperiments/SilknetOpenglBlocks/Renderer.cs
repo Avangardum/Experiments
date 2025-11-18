@@ -34,7 +34,6 @@ public sealed class Renderer
         SetupShaders();
         SetupChunkEbo();
         SetupBlockTexture();
-        //_gl.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
     }
     
     private void SetupShaders()
@@ -100,22 +99,14 @@ public sealed class Renderer
     
     private void RenderChunks()
     {
-        const int renderDistance = 3;
+        const int renderDistance = 1;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
-        ForXyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
+        For.XyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
         {
             RenderChunk(_game.GetChunk(chunkIndex));
         });
-    }
-    
-    private void ForXyzInclusive(Vector3D<int> start, Vector3D<int> end, Action<Vector3D<int>> func)
-    {
-        for (int x = start.X; x <= end.X; x++)
-        for (int y = start.Y; y <= end.Y; y++)
-        for (int z = start.Z; z <= end.Z; z++)
-            func(new Vector3D<int>(x, y, z));
     }
     
     private void HandleGlErrors()
@@ -219,5 +210,18 @@ public sealed class Renderer
         float u = topLeftU + offsetFromTopLeftU;
         float v = topLeftV + offsetFromTopLeftV;
         return (u, v);
+    }
+    
+    private bool _isWireframeEnabled;
+    
+    public void ToggleWireframe()
+    {
+        _isWireframeEnabled = !_isWireframeEnabled;
+        _gl.PolygonMode(TriangleFace.FrontAndBack, _isWireframeEnabled ? PolygonMode.Line : PolygonMode.Fill);
+    }
+    
+    public void PrintState()
+    {
+        Console.WriteLine($"Camera pos: {_camera.Position}");
     }
 }

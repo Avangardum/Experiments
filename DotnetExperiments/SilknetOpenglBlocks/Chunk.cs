@@ -5,9 +5,11 @@ namespace SilknetOpenglBlocks;
 public sealed class Chunk(Vector3D<int> index)
 {
     public Vector3D<int> Index => index;
+    public Vector3D<int> Origin => Index * Size;
     
     public const int Size = 64;
     public const int Volume = Size * Size * Size;
+    public static readonly Vector3D<int> SizeVector = Vector3D<int>.One * Size;
     
     private Block[,,] _blocks = new Block[Size, Size, Size];
     
@@ -45,6 +47,8 @@ public sealed class Chunk(Vector3D<int> index)
         }
     }
     
+    public void ForEachChunkPos(Action<Vector3D<int>> func) => For.XyzExclusive(Vector3D<int>.Zero, SizeVector, func);
+    
     public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos)
     {
         Vector3D<int> index = worldPos / Size;
@@ -65,4 +69,6 @@ public sealed class Chunk(Vector3D<int> index)
         if (chunkPos.Z < 0) chunkPos.Z += Size;
         return chunkPos;
     }
+    
+    public Vector3D<int> ChunkPosToWorldPos(Vector3D<int> chunkPos) => Origin + chunkPos;
 }

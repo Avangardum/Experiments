@@ -9,12 +9,14 @@ public sealed class InputHandler
 {
     private readonly IInputContext _input;
     private readonly Camera _camera;
+    private readonly Renderer _renderer;
     private Vector2? _lastMousePosition;
 
-    public InputHandler(IInputContext input, Camera camera)
+    public InputHandler(IInputContext input, Camera camera, Renderer renderer)
     {
         _input = input;
         _camera = camera;
+        _renderer = renderer;
 
         foreach (IKeyboard keyboard in _input.Keyboards)
         {
@@ -43,6 +45,8 @@ public sealed class InputHandler
     private void OnKeyDown(IKeyboard keyboard, Key key, int keyCode)
     {
         if (key == Key.Escape) Environment.Exit(0);
+        if (key == Key.F1) _renderer.ToggleWireframe();
+        if (key == Key.F2) _renderer.PrintState();
     }
 
     public void ProcessInput(double deltaTime)

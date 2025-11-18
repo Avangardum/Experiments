@@ -35,7 +35,7 @@ void OnLoad()
     camera = new Camera();
     game = new Game();
     renderer = new Renderer(gl, game, camera);
-    inputHandler = new InputHandler(input, camera);
+    inputHandler = new InputHandler(input, camera, renderer);
 }
 
 void OnUpdate(double deltaTime)

@@ -19,27 +19,39 @@ public sealed class Game
     {
         Chunk chunk = new(index);
         
-        int chunkYOffset = index.Y * Chunk.Size;
+        int[,] surfaceHeights = GetSurfaceHeights(chunk); 
         
-        for (int x = 0; x < Chunk.Size; x++)
-        for (int y = 0; y < Chunk.Size; y++)
-        for (int z = 0; z < Chunk.Size; z++)
+        chunk.ForEachChunkPos((Vector3D<int> chunkPos) =>
         {
-            int worldY = chunkYOffset + y;
-            chunk[x, y, z] = worldY switch
+            Vector3D<int> worldPos = chunk.ChunkPosToWorldPos(chunkPos);
+            chunk[chunkPos] = (worldPos.Y - surfaceHeights[chunkPos.X, chunkPos.Z]) switch
             {
-                < 16 => Block.Stone,
-                16 => Block.Dirt,
-                _ => Block.Air
+                > 0 => Block.Air,
+                0 => Block.Dirt,
+                < 0 => Block.Stone
             };
-        }
-        
-        for (int y = 0; y < Chunk.Size; y++)
-        {
-            chunk[10, y, 10] = Block.Wood;
-        }
+        });
         
         return chunk;
+    }
+    
+    private int[,] GetSurfaceHeights(Chunk chunk)
+    {
+        FastNoiseLite noise = new();
+        noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
+        int[,] heights = new int[Chunk.Size, Chunk.Size];
+        for (int xChunkPos = 0; xChunkPos < Chunk.Size; xChunkPos++)
+        for (int zChunkPos = 0; zChunkPos < Chunk.Size; zChunkPos++)
+        {
+            int xWorldPos = chunk.Index.X * Chunk.Size + xChunkPos;
+            int zWorldPos = chunk.Index.Z * Chunk.Size + zChunkPos;
+            const int minHeight = 0;
+            const int maxHeight = 63;
+            float rawNoiseValue = noise.GetNoise(xWorldPos, zWorldPos);
+            heights[xChunkPos, zChunkPos] =
+                RangeConverter.ConvertFromFloatRangeToInclusiveIntRange(rawNoiseValue, -1f, 1f, minHeight, maxHeight);
+        }
+        return heights;
     }
 
     public Block BlockAt(int x, int y, int z) => BlockAt(new Vector3D<int>(x, y, z));
