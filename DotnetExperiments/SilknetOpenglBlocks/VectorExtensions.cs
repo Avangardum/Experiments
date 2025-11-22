@@ -1,0 +1,13 @@
+using Silk.NET.Maths;
+
+namespace SilknetOpenglBlocks;
+
+public static class VectorExtensions 
+{
+    public static Vector3D<TOut> Select<TIn, TOut>(this Vector3D<TIn> vector, Func<TIn, TOut> func)
+        where TIn : unmanaged, IFormattable, IEquatable<TIn>, IComparable<TIn>
+        where TOut : unmanaged, IFormattable, IEquatable<TOut>, IComparable<TOut>
+    {
+        return new Vector3D<TOut>(func(vector.X), func(vector.Y), func(vector.Z));
+    }
+}

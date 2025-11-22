@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilknetOpenglHelloQuad", "S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilknetOpenglBlocks", "SilknetOpenglBlocks\SilknetOpenglBlocks.csproj", "{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilknetOpenglBlocks.Tests", "SilknetOpenglBlocks.Tests\SilknetOpenglBlocks.Tests.csproj", "{8AB75988-61C1-4129-BFF2-080A74AEFECA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3983F61E-B0BA-402D-97A1-A5E4870AAD6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AB75988-61C1-4129-BFF2-080A74AEFECA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AB75988-61C1-4129-BFF2-080A74AEFECA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AB75988-61C1-4129-BFF2-080A74AEFECA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AB75988-61C1-4129-BFF2-080A74AEFECA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

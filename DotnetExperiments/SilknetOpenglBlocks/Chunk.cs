@@ -7,7 +7,9 @@ public sealed class Chunk(Vector3D<int> index)
     public Vector3D<int> Index => index;
     public Vector3D<int> Origin => Index * Size;
     
-    public const int Size = 64;
+    public const int Size = 16;
+    public static readonly int Log2Size = 4;
+    public static readonly int WorldPosToChunkPosBitMask = Size - 1;
     public const int Volume = Size * Size * Size;
     public static readonly Vector3D<int> SizeVector = Vector3D<int>.One * Size;
     
@@ -49,26 +51,17 @@ public sealed class Chunk(Vector3D<int> index)
     
     public void ForEachChunkPos(Action<Vector3D<int>> func) => For.XyzExclusive(Vector3D<int>.Zero, SizeVector, func);
     
-    public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos)
-    {
-        Vector3D<int> index = worldPos / Size;
-        if (worldPos.X < 0) index.X--;
-        if (worldPos.Y < 0) index.Y--;
-        if (worldPos.Z < 0) index.Z--;
-        return index;
-    }
+    public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos) => worldPos.Select(WorldPosToChunkIndex);
     
-    public static Vector3D<int> WorldPosToChunkIndex(Vector3D<float> worldPos) =>
-        WorldPosToChunkIndex(worldPos.As<int>());
+    public static Vector3D<int> WorldPosToChunkIndex(Vector3D<float> worldPos) => worldPos.Select(WorldPosToChunkIndex);
     
-    public static Vector3D<int> WorldPosToChunkPos(Vector3D<int> worldPos)
-    {
-        Vector3D<int> chunkPos = worldPos.Remainder(Size);
-        if (chunkPos.X < 0) chunkPos.X += Size;
-        if (chunkPos.Y < 0) chunkPos.Y += Size;
-        if (chunkPos.Z < 0) chunkPos.Z += Size;
-        return chunkPos;
-    }
+    public static int WorldPosToChunkIndex(int worldPos) => worldPos >> Log2Size;
+
+    public static int WorldPosToChunkIndex(float worldPos) => WorldPosToChunkIndex((int)MathF.Round(worldPos));
     
+    public static Vector3D<int> WorldPosToChunkPos(Vector3D<int> worldPos) => worldPos.Select(WorldPosToChunkPos);
+    
+    public static int WorldPosToChunkPos(int worldPos) => worldPos & WorldPosToChunkPosBitMask;
+
     public Vector3D<int> ChunkPosToWorldPos(Vector3D<int> chunkPos) => Origin + chunkPos;
 }

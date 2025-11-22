@@ -59,10 +59,7 @@ public sealed class Game
     public Block BlockAt(Vector3D<int> worldPos)
     {
         Vector3D<int> chunkIndex = Chunk.WorldPosToChunkIndex(worldPos);
-        Vector3D<int> posInChunk = Chunk.WorldPosToChunkPos(worldPos);
-        if (posInChunk.X < 0) posInChunk.X += Chunk.Size;
-        if (posInChunk.Y < 0) posInChunk.Y += Chunk.Size;
-        if (posInChunk.Z < 0) posInChunk.Z += Chunk.Size;
-        return GetChunk(chunkIndex)[posInChunk];
+        Vector3D<int> chunkPos = Chunk.WorldPosToChunkPos(worldPos);
+        return GetChunk(chunkIndex)[chunkPos];
     }
 }
