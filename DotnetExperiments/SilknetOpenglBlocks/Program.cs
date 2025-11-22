@@ -8,6 +8,7 @@ Renderer renderer = null!;
 InputHandler inputHandler = null!;
 Camera camera = null!;
 Game game = null!;
+WorldGenerator worldGenerator = null!;
 
 IWindow window = CreateWindow();
 
@@ -33,7 +34,8 @@ void OnLoad()
     IInputContext input = window.CreateInput();
     
     camera = new Camera();
-    game = new Game();
+    worldGenerator = new WorldGenerator();
+    game = new Game(worldGenerator);
     renderer = new Renderer(gl, game, camera);
     inputHandler = new InputHandler(input, camera, renderer);
 }
