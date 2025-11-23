@@ -17,6 +17,8 @@ public sealed class Renderer
     private ShaderProgram _chunkShaderProgram = null!;
     private uint _blockTextureId;
     private uint _chunkEboId;
+    private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
+    private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
     
     private const int ElementsPerCubeFace = 6;
     private const int CubeFaces = 6;
@@ -34,6 +36,17 @@ public sealed class Renderer
         SetupShaders();
         SetupChunkEbo();
         SetupBlockTexture();
+        game.BlockUpdated += OnBlockUpdated;
+    }
+    
+    private void OnBlockUpdated(Vector3D<int> updatedBlockWorldPos)
+    {
+        Vector3D<int> updatedBlockChunkIndex = Chunk.WorldPosToChunkIndex(updatedBlockWorldPos);
+        For.XyzInclusive(updatedBlockChunkIndex - Vector3D<int>.One, updatedBlockChunkIndex + Vector3D<int>.One, chunkIndex =>
+        {
+            Chunk chunk = _game.GetChunk(chunkIndex);
+            GetChunkRenderState(chunk).ShouldRecalcVertices = true;
+        });
     }
     
     private void SetupShaders()
@@ -133,10 +146,6 @@ public sealed class Renderer
                 [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
         }.ToImmutableDictionary();
     
-    private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
-    
-    private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
-    
     private void RenderChunk(Chunk chunk)
     {
         ChunkRenderState renderState = GetChunkRenderState(chunk);
@@ -149,20 +158,20 @@ public sealed class Renderer
         // TODO simplify
         int verticesNextIndex = 0;
         int faceCount = 0;
-        renderState.Chunk.ForEachVisibleBlock((block, blockPosInChunk) =>
+        renderState.Chunk.ForEachVisibleBlock((block, chunkPos) =>
         {
-            Vector3D<int> blockPosInWorld = Chunk.Size * renderState.Chunk.Index + blockPosInChunk;
+            Vector3D<int> worldPos = renderState.Chunk.ChunkPosToWorldPos(chunkPos);
             foreach (Direction direction in Direction.All)
             {
-                Vector3D<int> neighborPos = blockPosInWorld + direction.IntUnitVector;
-                if (_game.BlockAt(neighborPos).IsOpaque()) continue;
+                Vector3D<int> neighborPos = worldPos + direction.IntUnitVector;
+                if (_game.GetBlock(neighborPos).IsOpaque()) continue;
                 ImmutableList<Vector3D<float>> vertexPositions = FaceVertexPositionsByDirection[direction];
                 for (int i = 0; i < vertexPositions.Count; i++)
                 {
                     Vector3D<float> vertexPos = vertexPositions[i];
-                    _vertices[verticesNextIndex++] = blockPosInWorld.X + vertexPos.X;
-                    _vertices[verticesNextIndex++] = blockPosInWorld.Y + vertexPos.Y;
-                    _vertices[verticesNextIndex++] = blockPosInWorld.Z + vertexPos.Z;
+                    _vertices[verticesNextIndex++] = worldPos.X + vertexPos.X;
+                    _vertices[verticesNextIndex++] = worldPos.Y + vertexPos.Y;
+                    _vertices[verticesNextIndex++] = worldPos.Z + vertexPos.Z;
                     (float u, float v) = GetVertexUv(block, i);
                     _vertices[verticesNextIndex++] = u;
                     _vertices[verticesNextIndex++] = v;

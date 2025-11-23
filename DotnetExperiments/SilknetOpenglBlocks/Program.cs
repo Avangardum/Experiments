@@ -32,10 +32,10 @@ void OnLoad()
 {
     GL gl = window.CreateOpenGL();
     IInputContext input = window.CreateInput();
-    
-    camera = new Camera();
+
     worldGenerator = new WorldGenerator();
     game = new Game(worldGenerator);
+    camera = new Camera(game);
     renderer = new Renderer(gl, game, camera);
     inputHandler = new InputHandler(input, camera, renderer);
 }

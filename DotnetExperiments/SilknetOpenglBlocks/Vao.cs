@@ -49,7 +49,7 @@ public sealed class Vao
     
     public void SetVertices(ReadOnlySpan<float> vertices)
     {
-        _gl.BindVertexArray(_id);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vboId);
         _gl.BufferData(BufferTargetARB.ArrayBuffer, vertices, BufferUsageARB.DynamicDraw);
         _areVerticesSet = true;
     }

@@ -26,6 +26,19 @@ public sealed class InputHandler
         {
             mouse.Cursor.CursorMode = CursorMode.Disabled;
             mouse.MouseMove += OnMouseMove;
+            mouse.MouseDown += OnMouseDown;
+        }
+    }
+
+    private void OnMouseDown(IMouse mouse, MouseButton button)
+    {
+        switch (button)
+        {
+            case MouseButton.Left:
+            {
+                _camera.BreakBlock();
+                break;
+            }
         }
     }
 
