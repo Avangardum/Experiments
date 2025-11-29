@@ -15,10 +15,12 @@ public sealed class Renderer
     private readonly Camera _camera;
     private readonly GL _gl;
     private ShaderProgram _chunkShaderProgram = null!;
+    private ShaderProgram _crosshairShaderProgram = null!;
     private uint _blockTextureId;
     private uint _chunkEboId;
     private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
     private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
+    private readonly Vao _crosshairVao;
     
     private const int ElementsPerCubeFace = 6;
     private const int CubeFaces = 6;
@@ -36,7 +38,18 @@ public sealed class Renderer
         SetupShaders();
         SetupChunkEbo();
         SetupBlockTexture();
+        _crosshairVao = SetupCrosshairVao();
         game.BlockUpdated += OnBlockUpdated;
+    }
+    
+    private Vao SetupCrosshairVao()
+    {
+        Vao vao = new(_gl);
+        vao.SetVertexAttributeSizes([2]);
+        vao.SetPrimitiveType(PrimitiveType.Lines);
+        vao.SetVertices([-0.02f, 0f, 0.02f, 0f, 0f, -0.02f, 0f, 0.02f]);
+        vao.SetVertexCount(4);
+        return vao;
     }
     
     private void OnBlockUpdated(Vector3D<int> updatedBlockWorldPos)
@@ -52,6 +65,7 @@ public sealed class Renderer
     private void SetupShaders()
     {
         _chunkShaderProgram = new ShaderProgram(_gl, "Block");
+        _crosshairShaderProgram = new ShaderProgram(_gl, "Crosshair");
     }
     
     private void SetupChunkEbo()
@@ -95,23 +109,31 @@ public sealed class Renderer
     public void Render(double deltaTime)
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+        
+        RenderChunks();
+        RenderCrosshair();
+        
+        HandleGlErrors();
+    }
+    
+    private void RenderCrosshair()
+    {
+        _crosshairShaderProgram.Use();
+        _crosshairVao.Draw();
+    }
+    
+    private void RenderChunks()
+    {
         _chunkShaderProgram.Use();
         _chunkShaderProgram.SetUniform("textureSampler", 0);
-        var model = Matrix4x4.Identity;
-        var view = _camera.ViewMatrix;
-        var projection = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView: float.DegreesToRadians(90),
+        Matrix4x4 model = Matrix4x4.Identity;
+        Matrix4X4<float> view = _camera.ViewMatrix;
+        Matrix4x4 projection = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView: float.DegreesToRadians(90),
             aspectRatio: 1, nearPlaneDistance: 0.01f, farPlaneDistance: 10_000f);
         _chunkShaderProgram.SetUniform("model", model);
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
         
-        RenderChunks();
-        
-        HandleGlErrors();
-    }
-    
-    private void RenderChunks()
-    {
         const int renderDistance = 4;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;

@@ -15,6 +15,7 @@ public sealed class Vao
     private bool _areVertexAttributeSizesSet;
     private bool _areVerticesSet;
     private bool _isVertexCountSet;
+    private PrimitiveType _primitiveType = PrimitiveType.Triangles;
 
     public Vao(GL gl)
     {
@@ -74,16 +75,18 @@ public sealed class Vao
         _vertexCount = count;
         _isVertexCountSet = true;
     }
+    
+    public void SetPrimitiveType(PrimitiveType type) => _primitiveType = type;
 
     public unsafe void Draw()
     {
         if (!_areVerticesSet) throw new InvalidOperationException("Vertices are not set.");
-        if (!_areVertexAttributeSizesSet) throw new InvalidOperationException("Vertex attribute sizes are not set");
-        if (!_isVertexCountSet) throw new InvalidOperationException("Vertex count is not set");
+        if (!_areVertexAttributeSizesSet) throw new InvalidOperationException("Vertex attribute sizes are not set.");
+        if (!_isVertexCountSet) throw new InvalidOperationException("Vertex count is not set.");
         if (_vertexCount == 0) return;
         
         _gl.BindVertexArray(_id);
-        if (_useEbo) _gl.DrawElements(PrimitiveType.Triangles, _vertexCount, DrawElementsType.UnsignedInt, null);
-        else _gl.DrawArrays(PrimitiveType.Triangles, 0, _vertexCount);
+        if (_useEbo) _gl.DrawElements(_primitiveType, _vertexCount, DrawElementsType.UnsignedInt, null);
+        else _gl.DrawArrays(_primitiveType, 0, _vertexCount);
     }
 }
