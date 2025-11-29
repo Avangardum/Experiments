@@ -10,4 +10,6 @@ public static class VectorExtensions
     {
         return new Vector3D<TOut>(func(vector.X), func(vector.Y), func(vector.Z));
     }
+    
+    public static Vector3D<int> RoundToInt(this Vector3D<float> value) => value.Select(x => (int)MathF.Round(x));
 }

@@ -7,6 +7,7 @@ public enum Block
     Stone,
     Wood,
     Leafs,
+    Brick,
     Water,
     Sand,
     Flower,

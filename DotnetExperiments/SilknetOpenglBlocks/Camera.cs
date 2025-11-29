@@ -36,6 +36,19 @@ public sealed class Camera(Game game)
     
     public void BreakBlock()
     {
+        if (!BlockRaycast(out Vector3D<int> hitBlockPos, out Vector3D<int> prevBlockPos)) return;
+        game.SetBlock(hitBlockPos, Block.Air);
+    }
+    
+    public void PlaceBlock()
+    {
+        if (!BlockRaycast(out Vector3D<int> hitBlockPos, out Vector3D<int> prevBlockPos)) return;
+        if (game.GetBlock(prevBlockPos) != Block.Air) return;
+        game.SetBlock(prevBlockPos, Block.Brick);
+    }
+    
+    private bool BlockRaycast(out Vector3D<int> hitBlockPos, out Vector3D<int> prevBlockPos)
+    {
         Vector3D<float> raycastStepVec = Front * RaycastStep;
         float rayLength = 0f;
         Vector3D<float> rayEnd = Position;
@@ -43,11 +56,25 @@ public sealed class Camera(Game game)
         {
             if (game.GetBlock(rayEnd) != Block.Air)
             {
-                game.SetBlock(rayEnd, Block.Air);
-                return;
+                hitBlockPos = rayEnd.RoundToInt();
+                prevBlockPos = (rayEnd - raycastStepVec).RoundToInt();
+                // Ensure that prevBlockPos only differs in a single coordinate
+                if (prevBlockPos.X != hitBlockPos.X)
+                {
+                    prevBlockPos.Y = hitBlockPos.Y;
+                    prevBlockPos.Z = hitBlockPos.Z;
+                }
+                else if (prevBlockPos.Y != hitBlockPos.Y)
+                {
+                    prevBlockPos.Z = hitBlockPos.Z;
+                }
+                return true;
             }
             rayEnd += raycastStepVec;
             rayLength += RaycastStep;
         }
+        hitBlockPos = Vector3D<int>.Zero;
+        prevBlockPos = Vector3D<int>.Zero;
+        return false;
     }
 }

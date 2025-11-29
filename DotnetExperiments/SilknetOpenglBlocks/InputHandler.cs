@@ -39,6 +39,11 @@ public sealed class InputHandler
                 _camera.BreakBlock();
                 break;
             }
+            case MouseButton.Right:
+            {
+                _camera.PlaceBlock();
+                break;
+            }
         }
     }
 
