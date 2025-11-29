@@ -1,12 +1,62 @@
+using System.Collections.Concurrent;
 using Silk.NET.Maths;
 
 namespace SilknetOpenglBlocks;
 
 public sealed class WorldGenerator
 {
-    public const int Seed = 12082036;
+    private const int Seed = 12082036;
+    private static readonly Vector3D<int> MinChunkIndex = new(-30, -5, -30);
+    private static readonly Vector3D<int> MaxChunkIndex = new(30, 5, 30);
+    
+    private AwaitableDictionary<Vector3D<int>, Chunk> _chunkAwaitableDictionary = new();
 
-    public Chunk GenerateChunk(Vector3D<int> index)
+    public WorldGenerator()
+    {
+        Task.Run(GenerateWorld);
+    }
+    
+    private void GenerateWorld()
+    {
+        // The world is generated in indexed boxes of chunks. Box with a given index is a set of chunks with the given
+        // distance from the zero chunk (in chunks, with diagonal movement considered 1 step as well), in other words,
+        // a chunk belongs to a box with index equal to the highest absolute value of the chunk's index vector.
+        // So the ring 0 is just the zero indexed chunk, the ring 1 is all its neighbors (including diagonal),
+        // and so on.
+        int maxBoxIndex = new [] { MinChunkIndex.X, MinChunkIndex.Y, MinChunkIndex.Z, MaxChunkIndex.X, MaxChunkIndex.Y,
+            MaxChunkIndex.Z }.Max(Math.Abs);
+        for (int boxIndex = 0; boxIndex <= maxBoxIndex; boxIndex++)
+        {
+            For.XyzInclusive(new Vector3D<int>(-boxIndex), new Vector3D<int>(boxIndex), (Vector3D<int> chunkIndex) =>
+            {
+                int maxAbsIndex = chunkIndex.ToEnumerable().Max(Math.Abs);
+                if (maxAbsIndex != boxIndex) return;
+                _chunkAwaitableDictionary[chunkIndex] = GenerateChunk(chunkIndex);
+            });
+            Console.WriteLine(boxIndex);
+        }
+    }
+    
+    public Chunk GetChunk(Vector3D<int> index)
+    {
+        if (IsChunkIndexOutOfBounds(index)) return new Chunk(index);
+        return _chunkAwaitableDictionary[index];
+    }
+    
+    public bool IsChunkIndexOutOfBounds(Vector3D<int> index)
+    {
+        return
+            index.X < MinChunkIndex.X || index.X > MaxChunkIndex.X ||
+            index.Y < MinChunkIndex.Y || index.Y > MaxChunkIndex.Y ||
+            index.Z < MinChunkIndex.Z || index.Z > MaxChunkIndex.Z;
+    }
+    
+    public bool IsChunkGenerated(Vector3D<int> index)
+    {
+        return IsChunkIndexOutOfBounds(index) || _chunkAwaitableDictionary.HasKey(index);
+    }
+
+    private Chunk GenerateChunk(Vector3D<int> index)
     {
         int chunkSeed = Seed + index.X * 42 + index.Y * 322 + index.Z;
         Random random = new(chunkSeed);

@@ -11,10 +11,12 @@ public sealed class Game(WorldGenerator worldGenerator)
     public Chunk GetChunk(Vector3D<int> index)
     {
         if (_chunks.TryGetValue(index, out Chunk? chunk)) return chunk;
-        chunk = worldGenerator.GenerateChunk(index);
+        chunk = worldGenerator.GetChunk(index);
         _chunks[index] = chunk;
         return chunk;
     }
+    
+    public bool IsChunkGenerated(Vector3D<int> index) => worldGenerator.IsChunkGenerated(index);
 
     public Block GetBlock(Vector3D<int> worldPos)
     {

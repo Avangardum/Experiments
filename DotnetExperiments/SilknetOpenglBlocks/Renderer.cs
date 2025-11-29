@@ -134,14 +134,29 @@ public sealed class Renderer
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
         
-        const int renderDistance = 4;
+        const int renderDistance = 10;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
         For.XyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
         {
-            RenderChunk(_game.GetChunk(chunkIndex));
+            if (IsChunkReadyForRendering(chunkIndex))
+                RenderChunk(_game.GetChunk(chunkIndex));
         });
+    }
+    
+    public bool IsChunkReadyForRendering(Vector3D<int> index)
+    {
+        bool result = true;
+        For.XyzInclusive(index - Vector3D<int>.One, index + Vector3D<int>.One, (i, breakLoop) =>
+        {
+            if (!_game.IsChunkGenerated(i))
+            {
+                result = false;
+                breakLoop();
+            }
+        });
+        return result;
     }
     
     private void HandleGlErrors()
