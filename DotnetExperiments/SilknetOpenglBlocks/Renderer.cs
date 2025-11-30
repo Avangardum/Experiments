@@ -21,17 +21,19 @@ public sealed class Renderer
     private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
     private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
     private readonly Vao _crosshairVao;
+    private readonly float _aspectRatio;
     
     private const int ElementsPerCubeFace = 6;
     private const int CubeFaces = 6;
     private const int VerticesPerCubeFace = 4;
     private const int VertexSize = 6;
     
-    public Renderer(GL gl, Game game, Camera camera)
+    public Renderer(GL gl, Game game, Camera camera, float aspectRatio)
     {
         _gl = gl;
         _game = game;
         _camera = camera;
+        _aspectRatio = aspectRatio;
         
         gl.ClearColor(Color.CornflowerBlue);
         gl.Enable(EnableCap.DepthTest);
@@ -119,6 +121,7 @@ public sealed class Renderer
     private void RenderCrosshair()
     {
         _crosshairShaderProgram.Use();
+        _crosshairShaderProgram.SetUniform("aspectRatio", _aspectRatio);
         _crosshairVao.Draw();
     }
     
@@ -126,10 +129,10 @@ public sealed class Renderer
     {
         _chunkShaderProgram.Use();
         _chunkShaderProgram.SetUniform("textureSampler", 0);
-        Matrix4x4 model = Matrix4x4.Identity;
+        Matrix4X4<float> model = Matrix4X4<float>.Identity;
         Matrix4X4<float> view = _camera.ViewMatrix;
-        Matrix4x4 projection = Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView: float.DegreesToRadians(90),
-            aspectRatio: 1, nearPlaneDistance: 0.01f, farPlaneDistance: 10_000f);
+        Matrix4X4<float> projection = Matrix4X4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _aspectRatio,
+            nearPlaneDistance: 0.01f, farPlaneDistance: 1000);
         _chunkShaderProgram.SetUniform("model", model);
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
@@ -140,9 +143,14 @@ public sealed class Renderer
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
         For.XyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
         {
-            if (IsChunkReadyForRendering(chunkIndex))
+            if (IsChunkInFrustum(chunkIndex, projection * view * model) && IsChunkReadyForRendering(chunkIndex))
                 RenderChunk(_game.GetChunk(chunkIndex));
         });
+    }
+    
+    private bool IsChunkInFrustum(Vector3D<int> index, Matrix4X4<float> projectionViewModel)
+    {
+        return true;
     }
     
     public bool IsChunkReadyForRendering(Vector3D<int> index)

@@ -22,7 +22,7 @@ IWindow CreateWindow()
 {
     return Window.Create(WindowOptions.Default with
     {
-        Size = new Vector2D<int>(1200, 1200),
+        Size = new Vector2D<int>(1800, 1200),
         Title = "Silk.NET OpenGL Blocks",
         VSync = false
     });
@@ -36,7 +36,8 @@ void OnLoad()
     worldGenerator = new WorldGenerator();
     game = new Game(worldGenerator);
     camera = new Camera(game);
-    renderer = new Renderer(gl, game, camera);
+    float aspectRatio = (float)window.Size.X / window.Size.Y;
+    renderer = new Renderer(gl, game, camera, aspectRatio);
     inputHandler = new InputHandler(input, camera, renderer);
 }
 
