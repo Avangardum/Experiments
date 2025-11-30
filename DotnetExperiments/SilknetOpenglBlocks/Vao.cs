@@ -70,7 +70,7 @@ public sealed class Vao
         _useEbo = eboId > 0;
     }
     
-    public void SetVertexCount(uint count)
+    public void SetVertexOrElementCount(uint count)
     {
         _vertexCount = count;
         _isVertexCountSet = true;

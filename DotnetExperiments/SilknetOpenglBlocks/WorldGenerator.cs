@@ -33,7 +33,6 @@ public sealed class WorldGenerator
                 if (maxAbsIndex != boxIndex) return;
                 _chunkAwaitableDictionary[chunkIndex] = GenerateChunk(chunkIndex);
             });
-            Console.WriteLine(boxIndex);
         }
     }
     

@@ -48,7 +48,7 @@ public sealed class Renderer
         vao.SetVertexAttributeSizes([2]);
         vao.SetPrimitiveType(PrimitiveType.Lines);
         vao.SetVertices([-0.02f, 0f, 0.02f, 0f, 0f, -0.02f, 0f, 0.02f]);
-        vao.SetVertexCount(4);
+        vao.SetVertexOrElementCount(4);
         return vao;
     }
     
@@ -186,41 +186,44 @@ public sealed class Renderer
     private void RenderChunk(Chunk chunk)
     {
         ChunkRenderState renderState = GetChunkRenderState(chunk);
-        if (renderState.ShouldRecalcVertices) RecalcChunkVertices(renderState);
+        if (renderState.ShouldRecalcVertices) GenerateChunkGeometry(renderState);
         renderState.Vao.Draw();
     }
     
-    private void RecalcChunkVertices(ChunkRenderState renderState)
+    private void GenerateChunkGeometry(ChunkRenderState renderState)
     {
-        // TODO simplify
-        int verticesNextIndex = 0;
+        int vertexCount = 0;
         int faceCount = 0;
         renderState.Chunk.ForEachVisibleBlock((block, chunkPos) =>
         {
             Vector3D<int> worldPos = renderState.Chunk.ChunkPosToWorldPos(chunkPos);
-            foreach (Direction direction in Direction.All)
-            {
-                Vector3D<int> neighborPos = worldPos + direction.IntUnitVector;
-                if (_game.GetBlock(neighborPos).IsOpaque()) continue;
-                ImmutableList<Vector3D<float>> vertexPositions = FaceVertexPositionsByDirection[direction];
-                for (int i = 0; i < vertexPositions.Count; i++)
-                {
-                    Vector3D<float> vertexPos = vertexPositions[i];
-                    _vertices[verticesNextIndex++] = worldPos.X + vertexPos.X;
-                    _vertices[verticesNextIndex++] = worldPos.Y + vertexPos.Y;
-                    _vertices[verticesNextIndex++] = worldPos.Z + vertexPos.Z;
-                    (float u, float v) = GetVertexUv(block, i);
-                    _vertices[verticesNextIndex++] = u;
-                    _vertices[verticesNextIndex++] = v;
-                    _vertices[verticesNextIndex++] = direction.GetLightLevel();
-                }
-                faceCount++;
-            }
+            foreach (Direction direction in Direction.All) GenerateBlockFace(block, worldPos, direction);
         });
             
-        renderState.Vao.SetVertices(new Span<float>(_vertices, 0, verticesNextIndex));
-        renderState.Vao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
+        renderState.Vao.SetVertices(new Span<float>(_vertices, 0, vertexCount));
+        renderState.Vao.SetVertexOrElementCount((uint)faceCount * ElementsPerCubeFace);
         renderState.ShouldRecalcVertices = false;
+        
+        
+        
+        void GenerateBlockFace(Block block, Vector3D<int> worldPos, Direction direction)
+        {
+            Vector3D<int> neighborPos = worldPos + direction.IntUnitVector;
+            if (_game.GetBlock(neighborPos).IsOpaque()) return;
+            ImmutableList<Vector3D<float>> vertexPositions = FaceVertexPositionsByDirection[direction];
+            for (int i = 0; i < vertexPositions.Count; i++)
+            {
+                Vector3D<float> vertexPos = vertexPositions[i];
+                _vertices[vertexCount++] = worldPos.X + vertexPos.X;
+                _vertices[vertexCount++] = worldPos.Y + vertexPos.Y;
+                _vertices[vertexCount++] = worldPos.Z + vertexPos.Z;
+                (float u, float v) = GetVertexUv(block, i);
+                _vertices[vertexCount++] = u;
+                _vertices[vertexCount++] = v;
+                _vertices[vertexCount++] = direction.GetLightLevel();
+            }
+            faceCount++;
+        }
     }
     
     private ChunkRenderState GetChunkRenderState(Chunk chunk)
