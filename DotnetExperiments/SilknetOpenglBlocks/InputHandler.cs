@@ -69,12 +69,16 @@ public sealed class InputHandler
 
     public void ProcessInput(double deltaTime)
     {
-        const float speed = 10;
-        if (IsKeyPressed(Key.A)) _camera.Position -= Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * (float)deltaTime * speed; 
-        if (IsKeyPressed(Key.D)) _camera.Position += Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.W)) _camera.Position += _camera.Front * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.S)) _camera.Position -= _camera.Front * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.Space)) _camera.Position += _camera.Up * (float)deltaTime * speed;
-        if (IsKeyPressed(Key.ShiftLeft)) _camera.Position -= _camera.Up * (float)deltaTime * speed;
+        float speed = IsKeyPressed(Key.ControlLeft) ? 10 : 5;
+        Vector3D<float> front = Vector3D.Normalize(_camera.Front with { Y = 0 });
+        float movementMagnitude = (float)deltaTime * speed;
+        if (IsKeyPressed(Key.A)) _camera.Position -=
+            Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * movementMagnitude; 
+        if (IsKeyPressed(Key.D)) _camera.Position +=
+            Vector3D.Normalize(Vector3D.Cross(_camera.Front, _camera.Up)) * movementMagnitude;
+        if (IsKeyPressed(Key.W)) _camera.Position += front * movementMagnitude;
+        if (IsKeyPressed(Key.S)) _camera.Position -= front * movementMagnitude;
+        if (IsKeyPressed(Key.Space)) _camera.Position += _camera.Up * movementMagnitude;
+        if (IsKeyPressed(Key.ShiftLeft)) _camera.Position -= _camera.Up * movementMagnitude;
     }
 }

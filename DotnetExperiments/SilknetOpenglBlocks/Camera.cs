@@ -32,7 +32,7 @@ public sealed class Camera(Game game)
     public Matrix4X4<float> ViewMatrix => Matrix4X4.CreateLookAt(Position, Position + Front, Vector3D<float>.UnitY);
     
     private const float RaycastStep = 0.01f;
-    private const float InteractionDistance = 3f;
+    private const float InteractionDistance = 4f;
     
     public void BreakBlock()
     {
