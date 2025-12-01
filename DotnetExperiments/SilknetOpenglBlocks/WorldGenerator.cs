@@ -26,13 +26,14 @@ public sealed class WorldGenerator
         int maxBoxIndex = new [] { MinChunkIndex.X, MinChunkIndex.Y, MinChunkIndex.Z, MaxChunkIndex.X, MaxChunkIndex.Y,
             MaxChunkIndex.Z }.Max(Math.Abs);
         for (int boxIndex = 0; boxIndex <= maxBoxIndex; boxIndex++)
+        for (int x = -boxIndex; x <= boxIndex; x++)
+        for (int y = -boxIndex; y <= boxIndex; y++)
+        for (int z = -boxIndex; z <= boxIndex; z++)
         {
-            For.XyzInclusive(new Vector3D<int>(-boxIndex), new Vector3D<int>(boxIndex), (Vector3D<int> chunkIndex) =>
-            {
-                int maxAbsIndex = chunkIndex.ToEnumerable().Max(Math.Abs);
-                if (maxAbsIndex != boxIndex) return;
-                _chunkAwaitableDictionary[chunkIndex] = GenerateChunk(chunkIndex);
-            });
+            Vector3D<int> chunkIndex = new(x, y, z);
+            int maxAbsIndex = chunkIndex.ToEnumerable().Max(Math.Abs);
+            if (maxAbsIndex != boxIndex) continue;
+            _chunkAwaitableDictionary[chunkIndex] = GenerateChunk(chunkIndex);
         }
     }
     
@@ -62,8 +63,11 @@ public sealed class WorldGenerator
         Chunk chunk = new(index);
         int[,] surfaceHeights = GetSurfaceHeights(chunk); 
         
-        chunk.ForEachChunkPos((Vector3D<int> chunkPos) =>
+        for (int x = 0; x < Chunk.Size; x++)
+        for (int y = 0; y < Chunk.Size; y++)
+        for (int z = 0; z < Chunk.Size; z++)
         {
+            Vector3D<int> chunkPos = new(x, y, z);
             Vector3D<int> worldPos = chunk.ChunkPosToWorldPos(chunkPos);
             chunk[chunkPos] = (worldPos.Y - surfaceHeights[chunkPos.X, chunkPos.Z]) switch
             {
@@ -71,7 +75,7 @@ public sealed class WorldGenerator
                 0 => Block.Dirt,
                 < 0 => Block.Stone
             };
-        });
+        }
         
         MaybeGenerateTree(chunk, random, surfaceHeights);
         

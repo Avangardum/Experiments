@@ -57,11 +57,13 @@ public sealed class Renderer
     private void OnBlockUpdated(Vector3D<int> updatedBlockWorldPos)
     {
         Vector3D<int> updatedBlockChunkIndex = Chunk.WorldPosToChunkIndex(updatedBlockWorldPos);
-        For.XyzInclusive(updatedBlockChunkIndex - Vector3D<int>.One, updatedBlockChunkIndex + Vector3D<int>.One, chunkIndex =>
+        for (int x = updatedBlockChunkIndex.X - 1; x <= updatedBlockChunkIndex.X + 1; x++)
+        for (int y = updatedBlockChunkIndex.Y - 1; y <= updatedBlockChunkIndex.Y + 1; y++)
+        for (int z = updatedBlockChunkIndex.Z - 1; z <= updatedBlockChunkIndex.Z + 1; z++)
         {
-            Chunk chunk = _game.GetChunk(chunkIndex);
+            Chunk chunk = _game.GetChunk(new Vector3D<int>(x, y, z));
             GetChunkRenderState(chunk).ShouldRecalcVertices = true;
-        });
+        }
     }
     
     private void SetupShaders()
@@ -142,14 +144,18 @@ public sealed class Renderer
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
-        For.XyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
+     
+        for (int x = minChunkIndex.X; x <= maxChunkIndex.X; x++)
+        for (int y = minChunkIndex.Y; y <= maxChunkIndex.Y; y++)
+        for (int z = minChunkIndex.Z; z <= maxChunkIndex.Z; z++)
         {
-            if (!IsChunkReadyForRendering(chunkIndex)) return;
-            Chunk chunk = _game.GetChunk(chunkIndex);
+            Vector3D<int> index = new(x, y, z);
+            if (!IsChunkReadyForRendering(index)) return;
+            Chunk chunk = _game.GetChunk(index);
             // TODO Frustum culling currently decreases FPS, review later.
             // if (!IsChunkInFrustum(chunk, viewProjection)) return;
             RenderChunk(chunk);
-        });
+        }
     }
     
     private bool IsChunkInFrustum(Chunk chunk, Matrix4X4<float> viewProjection)
@@ -165,18 +171,13 @@ public sealed class Renderer
         return true;
     }
     
-    public bool IsChunkReadyForRendering(Vector3D<int> index)
+    private bool IsChunkReadyForRendering(Vector3D<int> index)
     {
-        bool result = true;
-        For.XyzInclusive(index - Vector3D<int>.One, index + Vector3D<int>.One, (i, breakLoop) =>
-        {
-            if (!_game.IsChunkGenerated(i))
-            {
-                result = false;
-                breakLoop();
-            }
-        });
-        return result;
+        for (int x = index.X - 1; x <= index.X + 1; x++)
+        for (int y = index.Y - 1; y <= index.Y + 1; y++)
+        for (int z = index.Z - 1; z <= index.Z + 1; z++)
+            if (!_game.IsChunkGenerated(new Vector3D<int>(x, y, z))) return false;
+        return true;
     }
     
     private void HandleGlErrors()

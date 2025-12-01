@@ -49,8 +49,6 @@ public sealed class Chunk(Vector3D<int> index)
         }
     }
     
-    public void ForEachChunkPos(Action<Vector3D<int>> func) => For.XyzExclusive(Vector3D<int>.Zero, SizeVector, func);
-    
     public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos) => worldPos.Select(WorldPosToChunkIndex);
     
     public static Vector3D<int> WorldPosToChunkIndex(Vector3D<float> worldPos) => worldPos.Select(WorldPosToChunkIndex);
