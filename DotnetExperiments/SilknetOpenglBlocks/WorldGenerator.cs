@@ -5,11 +5,20 @@ namespace SilknetOpenglBlocks;
 
 public sealed class WorldGenerator
 {
+    // The world is generated in indexed boxes of chunks. Box with a given index is a set of chunks with the given
+    // distance from the zero chunk (in chunks, with diagonal movement considered 1 step as well), in other words,
+    // a chunk belongs to a box with index equal to the highest absolute value of the chunk's index vector.
+    // So the ring 0 is just the zero indexed chunk, the ring 1 is all its neighbors (including diagonal),
+    // and so on.
+    
     private const int Seed = 12082036;
     private static readonly Vector3D<int> MinChunkIndex = new(-30, -5, -30);
     private static readonly Vector3D<int> MaxChunkIndex = new(30, 5, 30);
+    private static readonly int MaxBoxIndex = new [] { MinChunkIndex.X, MinChunkIndex.Y, MinChunkIndex.Z, MaxChunkIndex.X, MaxChunkIndex.Y,
+        MaxChunkIndex.Z }.Max(Math.Abs);
     
     private AwaitableDictionary<Vector3D<int>, Chunk> _chunkAwaitableDictionary = new();
+    private volatile int currentlyGeneratedBoxIndex;
 
     public WorldGenerator()
     {
@@ -18,21 +27,14 @@ public sealed class WorldGenerator
     
     private void GenerateWorld()
     {
-        // The world is generated in indexed boxes of chunks. Box with a given index is a set of chunks with the given
-        // distance from the zero chunk (in chunks, with diagonal movement considered 1 step as well), in other words,
-        // a chunk belongs to a box with index equal to the highest absolute value of the chunk's index vector.
-        // So the ring 0 is just the zero indexed chunk, the ring 1 is all its neighbors (including diagonal),
-        // and so on.
-        int maxBoxIndex = new [] { MinChunkIndex.X, MinChunkIndex.Y, MinChunkIndex.Z, MaxChunkIndex.X, MaxChunkIndex.Y,
-            MaxChunkIndex.Z }.Max(Math.Abs);
-        for (int boxIndex = 0; boxIndex <= maxBoxIndex; boxIndex++)
-        for (int x = -boxIndex; x <= boxIndex; x++)
-        for (int y = -boxIndex; y <= boxIndex; y++)
-        for (int z = -boxIndex; z <= boxIndex; z++)
+        for (currentlyGeneratedBoxIndex = 0; currentlyGeneratedBoxIndex <= MaxBoxIndex; currentlyGeneratedBoxIndex++)
+        for (int x = -currentlyGeneratedBoxIndex; x <= currentlyGeneratedBoxIndex; x++)
+        for (int y = -currentlyGeneratedBoxIndex; y <= currentlyGeneratedBoxIndex; y++)
+        for (int z = -currentlyGeneratedBoxIndex; z <= currentlyGeneratedBoxIndex; z++)
         {
             Vector3D<int> chunkIndex = new(x, y, z);
             int maxAbsIndex = chunkIndex.ToEnumerable().Max(Math.Abs);
-            if (maxAbsIndex != boxIndex) continue;
+            if (maxAbsIndex != currentlyGeneratedBoxIndex) continue;
             _chunkAwaitableDictionary[chunkIndex] = GenerateChunk(chunkIndex);
         }
     }
@@ -42,8 +44,8 @@ public sealed class WorldGenerator
         if (IsChunkIndexOutOfBounds(index)) return new Chunk(index);
         return _chunkAwaitableDictionary[index];
     }
-    
-    public bool IsChunkIndexOutOfBounds(Vector3D<int> index)
+
+    private bool IsChunkIndexOutOfBounds(Vector3D<int> index)
     {
         return
             index.X < MinChunkIndex.X || index.X > MaxChunkIndex.X ||
@@ -53,6 +55,10 @@ public sealed class WorldGenerator
     
     public bool IsChunkGenerated(Vector3D<int> index)
     {
+        if (currentlyGeneratedBoxIndex > MaxBoxIndex) return true;
+        int boxIndex = Math.Max(Math.Max(Math.Abs(index.X), Math.Abs(index.Y)), Math.Abs(index.Z));
+        if (boxIndex < currentlyGeneratedBoxIndex) return true;
+        if (boxIndex > currentlyGeneratedBoxIndex) return false;
         return IsChunkIndexOutOfBounds(index) || _chunkAwaitableDictionary.HasKey(index);
     }
 

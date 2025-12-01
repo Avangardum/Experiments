@@ -173,11 +173,13 @@ public sealed class Renderer
     
     private bool IsChunkReadyForRendering(Vector3D<int> index)
     {
-        for (int x = index.X - 1; x <= index.X + 1; x++)
-        for (int y = index.Y - 1; y <= index.Y + 1; y++)
-        for (int z = index.Z - 1; z <= index.Z + 1; z++)
-            if (!_game.IsChunkGenerated(new Vector3D<int>(x, y, z))) return false;
-        return true;
+        return _game.IsChunkGenerated(index) &&
+            _game.IsChunkGenerated(index + Vector3D<int>.UnitX) &&
+            _game.IsChunkGenerated(index - Vector3D<int>.UnitX) &&
+            _game.IsChunkGenerated(index + Vector3D<int>.UnitY) &&
+            _game.IsChunkGenerated(index - Vector3D<int>.UnitY) &&
+            _game.IsChunkGenerated(index + Vector3D<int>.UnitZ) &&
+            _game.IsChunkGenerated(index - Vector3D<int>.UnitZ);
     }
     
     private void HandleGlErrors()
