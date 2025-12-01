@@ -64,4 +64,14 @@ public sealed class Chunk(Vector3D<int> index)
     public static int WorldPosToChunkPos(int worldPos) => worldPos & WorldPosToChunkPosBitMask;
 
     public Vector3D<int> ChunkPosToWorldPos(Vector3D<int> chunkPos) => Origin + chunkPos;
+    
+    public Aabb Aabb
+    {
+        get
+        {
+            Vector3D<float> start = Origin.As<float>() - Vector3D<float>.One / 2;
+            Vector3D<float> end = start + Vector3D<float>.One * Size;
+            return new Aabb(start, end);
+        }
+    }
 }

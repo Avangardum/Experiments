@@ -133,6 +133,7 @@ public sealed class Renderer
         Matrix4X4<float> view = _camera.ViewMatrix;
         Matrix4X4<float> projection = Matrix4X4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _aspectRatio,
             nearPlaneDistance: 0.01f, farPlaneDistance: 1000);
+        Matrix4X4<float> viewProjection = view * projection;
         _chunkShaderProgram.SetUniform("model", model);
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
@@ -143,13 +144,24 @@ public sealed class Renderer
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
         For.XyzInclusive(minChunkIndex, maxChunkIndex, (Vector3D<int> chunkIndex) =>
         {
-            if (IsChunkInFrustum(chunkIndex, projection * view * model) && IsChunkReadyForRendering(chunkIndex))
-                RenderChunk(_game.GetChunk(chunkIndex));
+            if (!IsChunkReadyForRendering(chunkIndex)) return;
+            Chunk chunk = _game.GetChunk(chunkIndex);
+            // TODO Frustum culling currently decreases FPS, review later.
+            // if (!IsChunkInFrustum(chunk, viewProjection)) return;
+            RenderChunk(chunk);
         });
     }
     
-    private bool IsChunkInFrustum(Vector3D<int> index, Matrix4X4<float> projectionViewModel)
+    private bool IsChunkInFrustum(Chunk chunk, Matrix4X4<float> viewProjection)
     {
+        IReadOnlyList<Vector3D<float>> worldSpaceCorners = chunk.Aabb.Corners;
+        IReadOnlyList<Vector3D<float>> clipSpaceCorners =
+            worldSpaceCorners.Select(it => it.TransformHomogenous(viewProjection)).ToImmutableList();
+
+        if (clipSpaceCorners.All(it => it.X > 1)) return false;
+        if (clipSpaceCorners.All(it => it.X < -1)) return false;
+        if (clipSpaceCorners.All(it => it.Y > 1)) return false;
+        if (clipSpaceCorners.All(it => it.Y < -1)) return false;
         return true;
     }
     

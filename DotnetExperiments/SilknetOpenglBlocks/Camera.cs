@@ -4,7 +4,7 @@ namespace SilknetOpenglBlocks;
 
 public sealed class Camera(Game game)
 {
-    public Vector3D<float> Position { get; set; } = new(20, 70, 20);
+    public Vector3D<float> Position { get; set; } = new(8, 50, 8);
 
     public float YawDeg { get; set; } = -90;
     public float PitchDeg { get; set; }

@@ -18,4 +18,17 @@ public static class VectorExtensions
     {
         return [value.X, value.Y, value.Z];
     }
+    
+    public static Vector3D<float> TransformHomogenous(this Vector3D<float> vector, Matrix4X4<float> matrix)
+    {
+        Vector4D<float> homogenousVector = new(vector, 1);
+        Vector4D<float> homogenousResult = homogenousVector * matrix;
+        if (homogenousResult.W == 0) homogenousResult.W = 1;
+        return new Vector3D<float>
+        (
+            homogenousResult.X / homogenousResult.W,
+            homogenousResult.Y / homogenousResult.W,
+            homogenousResult.Z / homogenousResult.W
+        );
+    }
 }
