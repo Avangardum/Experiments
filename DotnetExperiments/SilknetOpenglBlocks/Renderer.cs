@@ -140,7 +140,7 @@ public sealed class Renderer
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
         
-        const int renderDistance = 10;
+        const int renderDistance = 20;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
@@ -150,10 +150,10 @@ public sealed class Renderer
         for (int z = minChunkIndex.Z; z <= maxChunkIndex.Z; z++)
         {
             Vector3D<int> index = new(x, y, z);
-            if (!IsChunkReadyForRendering(index)) return;
+            if (!IsChunkReadyForRendering(index)) continue;
             Chunk chunk = _game.GetChunk(index);
             // TODO Frustum culling currently decreases FPS, review later.
-            // if (!IsChunkInFrustum(chunk, viewProjection)) return;
+            // if (!IsChunkInFrustum(chunk, viewProjection)) continue;
             RenderChunk(chunk);
         }
     }
