@@ -4,7 +4,7 @@ namespace SilknetOpenglBlocks;
 
 public readonly record struct Aabb(Vector3D<float> Start, Vector3D<float> End)
 {
-    public IReadOnlyList<Vector3D<float>> Corners =>
+    public IReadOnlyList<Vector3D<float>> Corners { get; } =
     [
         new(Start.X, Start.Y, Start.Z),
         new(  End.X, Start.Y, Start.Z),

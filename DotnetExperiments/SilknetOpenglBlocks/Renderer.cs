@@ -19,7 +19,7 @@ public sealed class Renderer
     private uint _blockTextureId;
     private uint _chunkEboId;
     private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
-    private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
+    private readonly Dictionary<Vector3D<int>, ChunkRenderState> _chunkRenderStates = [];
     private readonly Vao _crosshairVao;
     private readonly float _aspectRatio;
     private bool _isWireframeEnabled;
@@ -57,14 +57,14 @@ public sealed class Renderer
     
     private void OnBlockUpdated(Vector3D<int> updatedBlockWorldPos)
     {
-        Vector3D<int> updatedBlockChunkIndex = Chunk.WorldPosToChunkIndex(updatedBlockWorldPos);
-        for (int x = updatedBlockChunkIndex.X - 1; x <= updatedBlockChunkIndex.X + 1; x++)
-        for (int y = updatedBlockChunkIndex.Y - 1; y <= updatedBlockChunkIndex.Y + 1; y++)
-        for (int z = updatedBlockChunkIndex.Z - 1; z <= updatedBlockChunkIndex.Z + 1; z++)
-        {
-            Chunk chunk = _game.GetChunk(new Vector3D<int>(x, y, z));
-            GetChunkRenderState(chunk).ShouldRecalcVertices = true;
-        }
+        Vector3D<int> chunkIndex = Chunk.WorldPosToChunkIndex(updatedBlockWorldPos);
+        GetChunkRenderState(chunkIndex).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitX).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitX).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitY).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitY).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitZ).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitZ).ShouldRecalcGeometry = true;
     }
     
     private void SetupShaders()
@@ -150,23 +150,17 @@ public sealed class Renderer
         {
             Vector3D<int> index = new(x, y, z);
             if (!IsChunkReadyForRendering(index)) continue;
-            Chunk chunk = _game.GetChunk(index);
+            ChunkRenderState renderState = GetChunkRenderState(index);
             // TODO Frustum culling currently decreases FPS, review later.
-            // if (!IsChunkInFrustum(chunk, viewProjection)) continue;
-            RenderChunk(chunk);
+            if (!IsChunkInFrustum(renderState.Chunk, viewProjection)) continue;
+            if (renderState.ShouldRecalcGeometry) GenerateChunkGeometry(renderState);
+            renderState.Vao.Draw();
         }
     }
     
     private bool IsChunkInFrustum(Chunk chunk, Matrix4X4<float> viewProjection)
     {
-        IReadOnlyList<Vector3D<float>> worldSpaceCorners = chunk.Aabb.Corners;
-        IReadOnlyList<Vector3D<float>> clipSpaceCorners =
-            worldSpaceCorners.Select(it => it.TransformHomogenous(viewProjection)).ToImmutableList();
-
-        if (clipSpaceCorners.All(it => it.X > 1)) return false;
-        if (clipSpaceCorners.All(it => it.X < -1)) return false;
-        if (clipSpaceCorners.All(it => it.Y > 1)) return false;
-        if (clipSpaceCorners.All(it => it.Y < -1)) return false;
+        // TODO Implement
         return true;
     }
     
@@ -215,14 +209,7 @@ public sealed class Renderer
             [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
         )
     ];
-    
-    private void RenderChunk(Chunk chunk)
-    {
-        ChunkRenderState renderState = GetChunkRenderState(chunk);
-        if (renderState.ShouldRecalcVertices) GenerateChunkGeometry(renderState);
-        renderState.Vao.Draw();
-    }
-    
+
     private void GenerateChunkGeometry(ChunkRenderState renderState)
     {
         int vertexCount = 0;
@@ -243,7 +230,7 @@ public sealed class Renderer
             
         renderState.Vao.SetVertices(new Span<float>(_vertices, 0, vertexCount));
         renderState.Vao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
-        renderState.ShouldRecalcVertices = false;
+        renderState.ShouldRecalcGeometry = false;
         return;
         
         void GenerateBlockFace
@@ -279,22 +266,22 @@ public sealed class Renderer
         }
     }
     
-    private ChunkRenderState GetChunkRenderState(Chunk chunk)
+    private ChunkRenderState GetChunkRenderState(Vector3D<int> index)
     {
-        if (_chunkRenderStates.TryGetValue(chunk, out ChunkRenderState? renderState)) return renderState;
-        renderState = CreateChunkRenderState(chunk);
-        _chunkRenderStates[chunk] = renderState;
+        if (_chunkRenderStates.TryGetValue(index, out ChunkRenderState? renderState)) return renderState;
+        renderState = CreateChunkRenderState(index);
+        _chunkRenderStates[index] = renderState;
         return renderState;
     }
     
-    private ChunkRenderState CreateChunkRenderState(Chunk chunk)
+    private ChunkRenderState CreateChunkRenderState(Vector3D<int> index)
     {
         Vao vao = new(_gl);
         vao.SetElements(_chunkEboId);
         vao.SetVertexAttributeSizes([3, 2, 1]);
         return new ChunkRenderState
         {
-            Chunk = chunk,
+            Chunk = _game.GetChunk(index),
             Vao = vao
         };
     }

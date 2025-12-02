@@ -3,9 +3,9 @@ using Silk.NET.Maths;
 
 namespace SilknetOpenglBlocks;
 
-public sealed class Chunk(Vector3D<int> index)
+public sealed class Chunk
 {
-    public Vector3D<int> Index => index;
+    public Vector3D<int> Index { get; }
     public Vector3D<int> Origin => Index * Size;
 
     public const int Size = 64;
@@ -21,6 +21,15 @@ public sealed class Chunk(Vector3D<int> index)
         float log2Size = MathF.Log2(Size);
         (log2Size % 1).Should().Be(0);
         Log2Size = (int)log2Size;
+    }
+    
+    public Chunk(Vector3D<int> index)
+    {
+        Index = index;
+        
+        Vector3D<float> start = Origin.As<float>() - Vector3D<float>.One / 2;
+        Vector3D<float> end = start + Vector3D<float>.One * Size;
+        Aabb = new Aabb(start, end);
     }
     
     public Block this[int x, int y, int z]
@@ -59,15 +68,7 @@ public sealed class Chunk(Vector3D<int> index)
 
     public Vector3D<int> ChunkPosToWorldPos(Vector3D<int> chunkPos) => Origin + chunkPos;
     
-    public Aabb Aabb
-    {
-        get
-        {
-            Vector3D<float> start = Origin.As<float>() - Vector3D<float>.One / 2;
-            Vector3D<float> end = start + Vector3D<float>.One * Size;
-            return new Aabb(start, end);
-        }
-    }
+    public Aabb Aabb { get; }
     
     public static bool IsValidChunkPos(Vector3D<int> chunkPos) =>
         chunkPos.X is >= 0 and < Size && chunkPos.Y is >= 0 and < Size && chunkPos.Z is >= 0 and < Size;
