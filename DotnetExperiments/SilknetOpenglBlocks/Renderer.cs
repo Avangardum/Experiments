@@ -51,7 +51,7 @@ public sealed class Renderer
         vao.SetVertexAttributeSizes([2]);
         vao.SetPrimitiveType(PrimitiveType.Lines);
         vao.SetVertices([-0.02f, 0f, 0.02f, 0f, 0f, -0.02f, 0f, 0.02f]);
-        vao.SetVertexOrElementCount(4);
+        vao.SetVertexCount(4);
         return vao;
     }
     
@@ -188,22 +188,33 @@ public sealed class Renderer
         Console.WriteLine($"OpenGL error {error}.");
     }
     
-    private readonly ImmutableDictionary<Direction, ImmutableList<Vector3D<float>>> FaceVertexPositionsByDirection =
-        new Dictionary<Direction, ImmutableList<Vector3D<float>>>
-        {
-            [Direction.Back] =
-                [new(-0.5f, -0.5f, 0.5f), new(-0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, -0.5f, 0.5f)],
-            [Direction.Forward] =
-                [new(0.5f, -0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, -0.5f, -0.5f)],
-            [Direction.Right] =
-                [new(0.5f, -0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, -0.5f, -0.5f)],
-            [Direction.Left] =
-                [new(-0.5f, -0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, 0.5f), new(-0.5f, -0.5f, 0.5f)],
-            [Direction.Up] =
-                [new(-0.5f, 0.5f, 0.5f), new(-0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, 0.5f)],
-            [Direction.Down] =
-                [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
-        }.ToImmutableDictionary();
+    private static readonly ImmutableList<(Direction, ImmutableList<Vector3D<float>>)> DirectionsAndFaceVertices =
+    [
+        (
+            Direction.Back,
+            [new(-0.5f, -0.5f, 0.5f), new(-0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, -0.5f, 0.5f)]
+        ),
+        (
+            Direction.Forward,
+            [new(0.5f, -0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, -0.5f, -0.5f)]
+        ),
+        (
+            Direction.Right,
+            [new(0.5f, -0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, -0.5f, -0.5f)]
+        ),
+        (
+            Direction.Left,
+            [new(-0.5f, -0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, 0.5f), new(-0.5f, -0.5f, 0.5f)]
+        ),
+        (
+            Direction.Up,
+            [new(-0.5f, 0.5f, 0.5f), new(-0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, 0.5f)]
+        ),
+        (
+            Direction.Down,
+            [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
+        )
+    ];
     
     private void RenderChunk(Chunk chunk)
     {
@@ -216,22 +227,35 @@ public sealed class Renderer
     {
         int vertexCount = 0;
         int faceCount = 0;
-        renderState.Chunk.ForEachVisibleBlock((block, chunkPos) =>
+        for (int x = 0; x < Chunk.Size; x++)
+        for (int y = 0; y < Chunk.Size; y++)
+        for (int z = 0; z < Chunk.Size; z++)
         {
-            Vector3D<int> worldPos = renderState.Chunk.ChunkPosToWorldPos(chunkPos);
-            foreach (Direction direction in Direction.All) GenerateBlockFace(block, worldPos, direction);
-        });
+            Block block = renderState.Chunk[x, y, z];
+            if (!block.IsVisible()) continue;
+            Vector3D<int> chunkPos = new(x, y, z);
+            for (int i = 0; i < DirectionsAndFaceVertices.Count; i++)
+            {
+                (Direction direction, IReadOnlyList<Vector3D<float>> vertices) = DirectionsAndFaceVertices[i];
+                GenerateBlockFace(block, chunkPos, direction, vertices);
+            }
+        }
             
         renderState.Vao.SetVertices(new Span<float>(_vertices, 0, vertexCount));
-        renderState.Vao.SetVertexOrElementCount((uint)faceCount * ElementsPerCubeFace);
+        renderState.Vao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
         renderState.ShouldRecalcVertices = false;
         return;
         
-        void GenerateBlockFace(Block block, Vector3D<int> worldPos, Direction direction)
+        void GenerateBlockFace
+        (
+            Block block,
+            Vector3D<int> chunkPos,
+            Direction direction,
+            IReadOnlyList<Vector3D<float>> vertexPositions
+        )
         {
-            Vector3D<int> neighborPos = worldPos + direction.IntUnitVector;
-            if (_game.GetBlock(neighborPos).IsOpaque()) return;
-            ImmutableList<Vector3D<float>> vertexPositions = FaceVertexPositionsByDirection[direction];
+            Vector3D<int> worldPos = renderState.Chunk.ChunkPosToWorldPos(chunkPos);
+            if (GetNeighborBlock(chunkPos, worldPos, direction).IsOpaque()) return;
             for (int i = 0; i < vertexPositions.Count; i++)
             {
                 Vector3D<float> vertexPos = vertexPositions[i];
@@ -244,6 +268,14 @@ public sealed class Renderer
                 _vertices[vertexCount++] = direction.GetLightLevel();
             }
             faceCount++;
+        }
+        
+        Block GetNeighborBlock(Vector3D<int> chunkPos, Vector3D<int> worldPos, Direction direction)
+        {
+            Vector3D<int> neighborSameChunkPos = chunkPos + direction.IntUnitVector;
+            return Chunk.IsValidChunkPos(neighborSameChunkPos) ?
+                renderState.Chunk[neighborSameChunkPos] :
+                _game.GetBlock(worldPos + direction.IntUnitVector); 
         }
     }
     

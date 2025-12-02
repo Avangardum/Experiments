@@ -45,18 +45,6 @@ public sealed class Chunk(Vector3D<int> index)
         }
     }
     
-    public void ForEachVisibleBlock(Action<Block, Vector3D<int>> func)
-    {
-        for (int x = 0; x < Size; x++)
-        for (int y = 0; y < Size; y++)
-        for (int z = 0; z < Size; z++)
-        {
-            Block block = _blocks[x, y, z];
-            if (!block.IsVisible()) continue;
-            func(block, new Vector3D<int>(x, y, z));
-        }
-    }
-    
     public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos) => worldPos.Select(WorldPosToChunkIndex);
     
     public static Vector3D<int> WorldPosToChunkIndex(Vector3D<float> worldPos) => worldPos.Select(WorldPosToChunkIndex);
@@ -80,4 +68,7 @@ public sealed class Chunk(Vector3D<int> index)
             return new Aabb(start, end);
         }
     }
+    
+    public static bool IsValidChunkPos(Vector3D<int> chunkPos) =>
+        chunkPos.X is >= 0 and < Size && chunkPos.Y is >= 0 and < Size && chunkPos.Z is >= 0 and < Size;
 }
