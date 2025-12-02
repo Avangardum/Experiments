@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using Silk.NET.Maths;
 
 namespace SilknetOpenglBlocks;
@@ -6,14 +7,21 @@ public sealed class Chunk(Vector3D<int> index)
 {
     public Vector3D<int> Index => index;
     public Vector3D<int> Origin => Index * Size;
-    
-    public const int Size = 16;
-    public static readonly int Log2Size = 4;
+
+    public const int Size = 64;
+    public static readonly int Log2Size;
     public static readonly int WorldPosToChunkPosBitMask = Size - 1;
     public const int Volume = Size * Size * Size;
     public static readonly Vector3D<int> SizeVector = Vector3D<int>.One * Size;
     
     private Block[,,] _blocks = new Block[Size, Size, Size];
+    
+    static Chunk()
+    {
+        float log2Size = MathF.Log2(Size);
+        (log2Size % 1).Should().Be(0);
+        Log2Size = (int)log2Size;
+    }
     
     public Block this[int x, int y, int z]
     {

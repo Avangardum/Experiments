@@ -22,6 +22,7 @@ public sealed class Renderer
     private readonly Dictionary<Chunk, ChunkRenderState> _chunkRenderStates = [];
     private readonly Vao _crosshairVao;
     private readonly float _aspectRatio;
+    private bool _isWireframeEnabled;
     
     private const int ElementsPerCubeFace = 6;
     private const int CubeFaces = 6;
@@ -113,10 +114,8 @@ public sealed class Renderer
     public void Render(double deltaTime)
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        
         RenderChunks();
         RenderCrosshair();
-        
         HandleGlErrors();
     }
     
@@ -131,7 +130,7 @@ public sealed class Renderer
     {
         _chunkShaderProgram.Use();
         _chunkShaderProgram.SetUniform("textureSampler", 0);
-        Matrix4X4<float> model = Matrix4X4<float>.Identity;
+        Matrix4X4<float> model = Matrix4X4<float>.Identity; // TODO remove
         Matrix4X4<float> view = _camera.ViewMatrix;
         Matrix4X4<float> projection = Matrix4X4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _aspectRatio,
             nearPlaneDistance: 0.01f, farPlaneDistance: 1000);
@@ -140,7 +139,7 @@ public sealed class Renderer
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
         
-        const int renderDistance = 20;
+        const int renderDistance = 5;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
@@ -226,8 +225,7 @@ public sealed class Renderer
         renderState.Vao.SetVertices(new Span<float>(_vertices, 0, vertexCount));
         renderState.Vao.SetVertexOrElementCount((uint)faceCount * ElementsPerCubeFace);
         renderState.ShouldRecalcVertices = false;
-        
-        
+        return;
         
         void GenerateBlockFace(Block block, Vector3D<int> worldPos, Direction direction)
         {
@@ -277,14 +275,13 @@ public sealed class Renderer
         int column = (int)block % spriteSheetSizeInBlocks;
         float topLeftU = column * textureSizeInUv;
         float topLeftV = row * textureSizeInUv;
+        // TODO fix edge sampling
         float offsetFromTopLeftU = vertexIndex is 0 or 1 ? 0 : textureSizeInUv;
         float offsetFromTopLeftV = vertexIndex is 1 or 2 ? 0 : textureSizeInUv;
         float u = topLeftU + offsetFromTopLeftU;
         float v = topLeftV + offsetFromTopLeftV;
         return (u, v);
     }
-    
-    private bool _isWireframeEnabled;
     
     public void ToggleWireframe()
     {
