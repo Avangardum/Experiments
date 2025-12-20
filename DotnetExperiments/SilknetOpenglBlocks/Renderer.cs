@@ -130,12 +130,10 @@ public sealed class Renderer
     {
         _chunkShaderProgram.Use();
         _chunkShaderProgram.SetUniform("textureSampler", 0);
-        Matrix4X4<float> model = Matrix4X4<float>.Identity; // TODO remove
         Matrix4X4<float> view = _camera.ViewMatrix;
         Matrix4X4<float> projection = Matrix4X4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _aspectRatio,
             nearPlaneDistance: 0.01f, farPlaneDistance: 1000);
         Matrix4X4<float> viewProjection = view * projection;
-        _chunkShaderProgram.SetUniform("model", model);
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
         
@@ -151,7 +149,6 @@ public sealed class Renderer
             Vector3D<int> index = new(x, y, z);
             if (!IsChunkReadyForRendering(index)) continue;
             ChunkRenderState renderState = GetChunkRenderState(index);
-            // TODO Frustum culling currently decreases FPS, review later.
             if (!IsChunkInFrustum(renderState.Chunk, viewProjection)) continue;
             if (renderState.ShouldRecalcGeometry) GenerateChunkGeometry(renderState);
             renderState.Vao.Draw();
