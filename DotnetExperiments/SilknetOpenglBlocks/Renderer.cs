@@ -6,6 +6,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 using StbImageSharp;
+using static SilknetOpenglBlocks.Const;
 
 namespace SilknetOpenglBlocks;
 
@@ -18,16 +19,11 @@ public sealed class Renderer
     private ShaderProgram _crosshairShaderProgram = null!;
     private uint _blockTextureId;
     private uint _chunkEboId;
-    private readonly float[] _vertices = new float[Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize];
     private readonly Dictionary<Vector3D<int>, ChunkRenderState> _chunkRenderStates = [];
     private readonly Vao _crosshairVao;
     private readonly float _aspectRatio;
     private bool _isWireframeEnabled;
-    
-    private const int ElementsPerCubeFace = 6;
-    private const int CubeFaces = 6;
-    private const int VerticesPerCubeFace = 4;
-    private const int VertexSize = 6;
+    private readonly ChunkMesher _chunkMesher;
     
     public Renderer(GL gl, Game game, Camera camera, float aspectRatio)
     {
@@ -35,6 +31,7 @@ public sealed class Renderer
         _game = game;
         _camera = camera;
         _aspectRatio = aspectRatio;
+        _chunkMesher = new ChunkMesher(game);
         
         gl.ClearColor(Color.CornflowerBlue);
         gl.Enable(EnableCap.DepthTest);
@@ -58,13 +55,13 @@ public sealed class Renderer
     private void OnBlockUpdated(Vector3D<int> updatedBlockWorldPos)
     {
         Vector3D<int> chunkIndex = Chunk.WorldPosToChunkIndex(updatedBlockWorldPos);
-        GetChunkRenderState(chunkIndex).ShouldRecalcGeometry = true;
-        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitX).ShouldRecalcGeometry = true;
-        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitX).ShouldRecalcGeometry = true;
-        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitY).ShouldRecalcGeometry = true;
-        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitY).ShouldRecalcGeometry = true;
-        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitZ).ShouldRecalcGeometry = true;
-        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitZ).ShouldRecalcGeometry = true;
+        GetChunkRenderState(chunkIndex).ShouldRequestMeshing = true;
+        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitX).ShouldRequestMeshing = true;
+        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitX).ShouldRequestMeshing = true;
+        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitY).ShouldRequestMeshing = true;
+        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitY).ShouldRequestMeshing = true;
+        GetChunkRenderState(chunkIndex + Vector3D<int>.UnitZ).ShouldRequestMeshing = true;
+        GetChunkRenderState(chunkIndex - Vector3D<int>.UnitZ).ShouldRequestMeshing = true;
     }
     
     private void SetupShaders()
@@ -136,23 +133,31 @@ public sealed class Renderer
         Matrix4X4<float> viewProjection = view * projection;
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
+        ApplyGeneratedChunkMeshes();
         
         const int renderDistance = 5;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
-     
+        
+        List<Chunk> chunksToMesh = [];
+        
         for (int x = minChunkIndex.X; x <= maxChunkIndex.X; x++)
         for (int y = minChunkIndex.Y; y <= maxChunkIndex.Y; y++)
         for (int z = minChunkIndex.Z; z <= maxChunkIndex.Z; z++)
         {
             Vector3D<int> index = new(x, y, z);
-            if (!IsChunkReadyForRendering(index)) continue;
             ChunkRenderState renderState = GetChunkRenderState(index);
             if (!IsChunkInFrustum(renderState.Chunk, viewProjection)) continue;
-            if (renderState.ShouldRecalcGeometry) GenerateChunkGeometry(renderState);
+            if (renderState.ShouldRequestMeshing)
+            {
+                chunksToMesh.Add(renderState.Chunk);
+                renderState.ShouldRequestMeshing = false;
+            }
             renderState.Vao.Draw();
         }
+        
+        RequestChunkMeshing(chunksToMesh);
     }
     
     private bool IsChunkInFrustum(Chunk chunk, Matrix4X4<float> viewProjection)
@@ -161,106 +166,37 @@ public sealed class Renderer
         return true;
     }
     
-    private bool IsChunkReadyForRendering(Vector3D<int> index)
+    private void ApplyGeneratedChunkMeshes()
     {
-        return _game.IsChunkGenerated(index) &&
-            _game.IsChunkGenerated(index + Vector3D<int>.UnitX) &&
-            _game.IsChunkGenerated(index - Vector3D<int>.UnitX) &&
-            _game.IsChunkGenerated(index + Vector3D<int>.UnitY) &&
-            _game.IsChunkGenerated(index - Vector3D<int>.UnitY) &&
-            _game.IsChunkGenerated(index + Vector3D<int>.UnitZ) &&
-            _game.IsChunkGenerated(index - Vector3D<int>.UnitZ);
+        IReadOnlyList<ChunkMesh> meshes = _chunkMesher.TakeGeneratedMeshes();
+        foreach (var mesh in meshes)
+        {
+            ChunkRenderState renderState = _chunkRenderStates[mesh.Index];
+            renderState.Vao.SetVertices(mesh.Vertices);
+            renderState.Vao.SetVertexCount((uint)mesh.Vertices.Count);
+        }
     }
     
+    private void RequestChunkMeshing(IReadOnlyList<Chunk> chunksToMesh)
+    {
+        ImmutableList<Vector3D<int>> chunksToMeshIndices = chunksToMesh.Select(it => it.Index).ToImmutableList();
+        Dictionary<Vector3D<int>, Chunk> chunksToMeshAndTheirNeighbors =
+            chunksToMesh.ToDictionary(it => it.Index, it => it);
+        foreach (Vector3D<int> index in chunksToMeshAndTheirNeighbors.Keys.ToImmutableList())
+        foreach (Direction direction in Direction.All)
+        {
+            Vector3D<int> neighborIndex = index + direction.IntUnitVector;
+            if (!chunksToMeshAndTheirNeighbors.ContainsKey(neighborIndex))
+                chunksToMeshAndTheirNeighbors[neighborIndex] = GetChunkRenderState(neighborIndex).Chunk;
+        }
+        _chunkMesher.RequestMeshing(chunksToMeshAndTheirNeighbors, chunksToMeshIndices);
+    }
+
     private void HandleGlErrors()
     {
         GLEnum error = _gl.GetError();
         if (error == GLEnum.NoError) return;
         Console.WriteLine($"OpenGL error {error}.");
-    }
-    
-    private static readonly ImmutableList<(Direction, ImmutableList<Vector3D<float>>)> DirectionsAndFaceVertices =
-    [
-        (
-            Direction.Back,
-            [new(-0.5f, -0.5f, 0.5f), new(-0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, -0.5f, 0.5f)]
-        ),
-        (
-            Direction.Forward,
-            [new(0.5f, -0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, -0.5f, -0.5f)]
-        ),
-        (
-            Direction.Right,
-            [new(0.5f, -0.5f, 0.5f), new(0.5f, 0.5f, 0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, -0.5f, -0.5f)]
-        ),
-        (
-            Direction.Left,
-            [new(-0.5f, -0.5f, -0.5f), new(-0.5f, 0.5f, -0.5f), new(-0.5f, 0.5f, 0.5f), new(-0.5f, -0.5f, 0.5f)]
-        ),
-        (
-            Direction.Up,
-            [new(-0.5f, 0.5f, 0.5f), new(-0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, -0.5f), new(0.5f, 0.5f, 0.5f)]
-        ),
-        (
-            Direction.Down,
-            [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
-        )
-    ];
-
-    private void GenerateChunkGeometry(ChunkRenderState renderState)
-    {
-        int vertexCount = 0;
-        int faceCount = 0;
-        for (int x = 0; x < Chunk.Size; x++)
-        for (int y = 0; y < Chunk.Size; y++)
-        for (int z = 0; z < Chunk.Size; z++)
-        {
-            Block block = renderState.Chunk[x, y, z];
-            if (!block.IsVisible()) continue;
-            Vector3D<int> chunkPos = new(x, y, z);
-            for (int i = 0; i < DirectionsAndFaceVertices.Count; i++)
-            {
-                (Direction direction, IReadOnlyList<Vector3D<float>> vertices) = DirectionsAndFaceVertices[i];
-                GenerateBlockFace(block, chunkPos, direction, vertices);
-            }
-        }
-            
-        renderState.Vao.SetVertices(new Span<float>(_vertices, 0, vertexCount));
-        renderState.Vao.SetVertexCount((uint)faceCount * ElementsPerCubeFace);
-        renderState.ShouldRecalcGeometry = false;
-        return;
-        
-        void GenerateBlockFace
-        (
-            Block block,
-            Vector3D<int> chunkPos,
-            Direction direction,
-            IReadOnlyList<Vector3D<float>> vertexPositions
-        )
-        {
-            Vector3D<int> worldPos = renderState.Chunk.ChunkPosToWorldPos(chunkPos);
-            if (GetNeighborBlock(chunkPos, worldPos, direction).IsOpaque()) return;
-            for (int i = 0; i < vertexPositions.Count; i++)
-            {
-                Vector3D<float> vertexPos = vertexPositions[i];
-                _vertices[vertexCount++] = worldPos.X + vertexPos.X;
-                _vertices[vertexCount++] = worldPos.Y + vertexPos.Y;
-                _vertices[vertexCount++] = worldPos.Z + vertexPos.Z;
-                (float u, float v) = GetVertexUv(block, i);
-                _vertices[vertexCount++] = u;
-                _vertices[vertexCount++] = v;
-                _vertices[vertexCount++] = direction.GetLightLevel();
-            }
-            faceCount++;
-        }
-        
-        Block GetNeighborBlock(Vector3D<int> chunkPos, Vector3D<int> worldPos, Direction direction)
-        {
-            Vector3D<int> neighborSameChunkPos = chunkPos + direction.IntUnitVector;
-            return Chunk.IsValidChunkPos(neighborSameChunkPos) ?
-                renderState.Chunk[neighborSameChunkPos] :
-                _game.GetBlock(worldPos + direction.IntUnitVector); 
-        }
     }
     
     private ChunkRenderState GetChunkRenderState(Vector3D<int> index)
@@ -274,6 +210,8 @@ public sealed class Renderer
     private ChunkRenderState CreateChunkRenderState(Vector3D<int> index)
     {
         Vao vao = new(_gl);
+        vao.SetVertices([]);
+        vao.SetVertexCount(0);
         vao.SetElements(_chunkEboId);
         vao.SetVertexAttributeSizes([3, 2, 1]);
         return new ChunkRenderState
@@ -281,22 +219,6 @@ public sealed class Renderer
             Chunk = _game.GetChunk(index),
             Vao = vao
         };
-    }
-    
-    private (float U, float V) GetVertexUv(Block block, int vertexIndex)
-    {
-        const int spriteSheetSizeInBlocks = 8;
-        const float textureSizeInUv = 1 / (float)spriteSheetSizeInBlocks;
-        int row = (int)block / spriteSheetSizeInBlocks;
-        int column = (int)block % spriteSheetSizeInBlocks;
-        float topLeftU = column * textureSizeInUv;
-        float topLeftV = row * textureSizeInUv;
-        // TODO fix edge sampling
-        float offsetFromTopLeftU = vertexIndex is 0 or 1 ? 0 : textureSizeInUv;
-        float offsetFromTopLeftV = vertexIndex is 1 or 2 ? 0 : textureSizeInUv;
-        float u = topLeftU + offsetFromTopLeftU;
-        float v = topLeftV + offsetFromTopLeftV;
-        return (u, v);
     }
     
     public void ToggleWireframe()

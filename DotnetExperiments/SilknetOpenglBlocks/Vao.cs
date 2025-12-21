@@ -29,10 +29,12 @@ public sealed class Vao
         
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vboId);
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _eboId);
+        // TODO don't bind in the constructor
     }
     
     public void SetVertexAttributeSizes(IReadOnlyList<int> sizes)
     {
+        // TODO bind VBO before calling VertexAttribPointer
         _gl.BindVertexArray(_id);
         _vertexSize = sizes.Sum();
         uint stride = (uint)_vertexSize * sizeof(float);

@@ -14,6 +14,7 @@ public sealed class Chunk
     public const int Volume = Size * Size * Size;
 
     private Block[,,] _blocks = new Block[Size, Size, Size];
+    private bool _isSnapshot;
     
     static Chunk()
     {
@@ -36,13 +37,17 @@ public sealed class Chunk
     public Block this[int x, int y, int z]
     {
         get => _blocks[x, y, z];
-        set => _blocks[x, y, z] = value;
+        set
+        {
+            if (_isSnapshot) throw new NotSupportedException();
+            _blocks[x, y, z] = value;
+        }
     }
-    
+
     public Block this[Vector3D<int> pos]
     {
-        get => _blocks[pos.X, pos.Y, pos.Z];
-        set => _blocks[pos.X, pos.Y, pos.Z] = value;
+        get => this[pos.X, pos.Y, pos.Z];
+        set => this[pos.X, pos.Y, pos.Z] = value;
     }
 
     public static Vector3D<int> WorldPosToChunkIndex(Vector3D<int> worldPos) => worldPos.Select(WorldPosToChunkIndex);
@@ -61,4 +66,12 @@ public sealed class Chunk
     
     public static bool IsValidChunkPos(Vector3D<int> chunkPos) =>
         chunkPos.X is >= 0 and < Size && chunkPos.Y is >= 0 and < Size && chunkPos.Z is >= 0 and < Size;
+    
+    public Chunk TakeSnapshot()
+    {
+        Chunk snapshot = new(Index);
+        snapshot._isSnapshot = true;
+        snapshot._blocks = (Block[,,])_blocks.Clone();
+        return snapshot;
+    }
 }
