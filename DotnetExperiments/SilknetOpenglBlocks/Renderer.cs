@@ -31,7 +31,7 @@ public sealed class Renderer
         _game = game;
         _camera = camera;
         _aspectRatio = aspectRatio;
-        _chunkMesher = new ChunkMesher(game);
+        _chunkMesher = new ChunkMesher();
         
         gl.ClearColor(Color.CornflowerBlue);
         gl.Enable(EnableCap.DepthTest);

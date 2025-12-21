@@ -5,15 +5,15 @@ using static SilknetOpenglBlocks.Const;
 
 namespace SilknetOpenglBlocks;
 
-public sealed class ChunkMesher(Game game) // TODO remove dependency on Game
+public sealed class ChunkMesher
 {
-    private record Request
+    private record MeshingRequest
     (
-        IReadOnlyDictionary<Vector3D<int>, Chunk> ChunksToMeshAndTheirNeighbors,
+        IReadOnlyDictionary<Vector3D<int>, Chunk> Chunks,
         IReadOnlyList<Vector3D<int>> ChunksToMeshIndices
     );
     
-    private readonly ConcurrentQueue<Request> _requests = [];
+    private readonly ConcurrentQueue<MeshingRequest> _meshingRequests = [];
     private readonly ConcurrentQueue<ChunkMesh> _generatedMeshes = [];
     
     private static readonly ImmutableList<(Direction, ImmutableList<Vector3D<float>>)> DirectionsAndFaceVertices =
@@ -46,14 +46,14 @@ public sealed class ChunkMesher(Game game) // TODO remove dependency on Game
     
     public void RequestMeshing
     (
-        IReadOnlyDictionary<Vector3D<int>, Chunk> chunksToMeshAndTheirNeighbors,
+        IReadOnlyDictionary<Vector3D<int>, Chunk> chunks,
         IReadOnlyList<Vector3D<int>> chunksToMeshIndices
     )
     {
         foreach (var index in chunksToMeshIndices)
         {
-            Chunk chunk = chunksToMeshAndTheirNeighbors[index];
-            ChunkMesh mesh = GenerateChunkMesh(chunk);
+            Chunk chunkToMesh = chunks[index];
+            ChunkMesh mesh = GenerateChunkMesh(chunkToMesh, chunks);
             _generatedMeshes.Enqueue(mesh);
         }
     }
@@ -68,14 +68,14 @@ public sealed class ChunkMesher(Game game) // TODO remove dependency on Game
         return result;
     }
     
-    private ChunkMesh GenerateChunkMesh(Chunk chunk)
+    private ChunkMesh GenerateChunkMesh(Chunk chunkToMesh, IReadOnlyDictionary<Vector3D<int>, Chunk> chunks)
     {
         List<float> vertices = [];
         for (int x = 0; x < Chunk.Size; x++)
         for (int y = 0; y < Chunk.Size; y++)
         for (int z = 0; z < Chunk.Size; z++)
         {
-            Block block = chunk[x, y, z];
+            Block block = chunkToMesh[x, y, z];
             if (!block.IsVisible()) continue;
             Vector3D<int> chunkPos = new(x, y, z);
             for (int i = 0; i < DirectionsAndFaceVertices.Count; i++)
@@ -84,7 +84,7 @@ public sealed class ChunkMesher(Game game) // TODO remove dependency on Game
                 GenerateBlockFace(block, chunkPos, direction, faceVertices);
             }
         }
-        return new ChunkMesh { Index = chunk.Index, Vertices = vertices };
+        return new ChunkMesh { Index = chunkToMesh.Index, Vertices = vertices };
         
         void GenerateBlockFace
         (
@@ -94,8 +94,8 @@ public sealed class ChunkMesher(Game game) // TODO remove dependency on Game
             IReadOnlyList<Vector3D<float>> vertexPositions
         )
         {
-            Vector3D<int> worldPos = chunk.ChunkPosToWorldPos(chunkPos);
-            if (GetNeighborBlock(chunkPos, worldPos, direction).IsOpaque()) return;
+            Vector3D<int> worldPos = chunkToMesh.ChunkPosToWorldPos(chunkPos);
+            if (GetNeighborBlock(worldPos, direction).IsOpaque()) return;
             for (int i = 0; i < vertexPositions.Count; i++)
             {
                 Vector3D<float> vertexPos = vertexPositions[i];
@@ -109,12 +109,12 @@ public sealed class ChunkMesher(Game game) // TODO remove dependency on Game
             }
         }
         
-        Block GetNeighborBlock(Vector3D<int> chunkPos, Vector3D<int> worldPos, Direction direction)
+        Block GetNeighborBlock(Vector3D<int> worldPos, Direction direction)
         {
-            Vector3D<int> neighborSameChunkPos = chunkPos + direction.IntUnitVector;
-            return Chunk.IsValidChunkPos(neighborSameChunkPos) ?
-                chunk[neighborSameChunkPos] :
-                game.GetBlock(worldPos + direction.IntUnitVector); 
+            Vector3D<int> neighborWorldPos = worldPos + direction.IntUnitVector;
+            Vector3D<int> neighborChunkIndex = Chunk.WorldPosToChunkIndex(neighborWorldPos);
+            Vector3D<int> neighborChunkPos = Chunk.WorldPosToChunkPos(neighborWorldPos);
+            return chunks[neighborChunkIndex][neighborChunkPos];
         }
     }
     
