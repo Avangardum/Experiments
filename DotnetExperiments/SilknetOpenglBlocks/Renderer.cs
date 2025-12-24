@@ -135,7 +135,7 @@ public sealed class Renderer
         _chunkShaderProgram.SetUniform("projection", projection);
         ApplyGeneratedChunkMeshes();
         
-        const int renderDistance = 5;
+        const int renderDistance = 3;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;

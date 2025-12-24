@@ -43,6 +43,26 @@ public sealed class ChunkMesher
             [new(-0.5f, -0.5f, -0.5f), new(-0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, 0.5f), new(0.5f, -0.5f, -0.5f)]
         )
     ];
+
+    public ChunkMesher()
+    {
+        Task.Run(Loop);
+    }
+    
+    private void Loop()
+    {
+        while (true)
+        {
+            if (_meshingRequests.TryDequeue(out MeshingRequest? request))
+            {
+                foreach (var index in request.ChunksToMeshIndices)
+                {
+                    ChunkMesh mesh = GenerateChunkMesh(request.Chunks[index], request.Chunks);
+                    _generatedMeshes.Enqueue(mesh);
+                }
+            }
+        }
+    }
     
     public void RequestMeshing
     (
@@ -50,12 +70,7 @@ public sealed class ChunkMesher
         IReadOnlyList<Vector3D<int>> chunksToMeshIndices
     )
     {
-        foreach (var index in chunksToMeshIndices)
-        {
-            Chunk chunkToMesh = chunks[index];
-            ChunkMesh mesh = GenerateChunkMesh(chunkToMesh, chunks);
-            _generatedMeshes.Enqueue(mesh);
-        }
+        _meshingRequests.Enqueue(new MeshingRequest(chunks, chunksToMeshIndices));
     }
     
     public IReadOnlyList<ChunkMesh> TakeGeneratedMeshes()
@@ -70,7 +85,8 @@ public sealed class ChunkMesher
     
     private ChunkMesh GenerateChunkMesh(Chunk chunkToMesh, IReadOnlyDictionary<Vector3D<int>, Chunk> chunks)
     {
-        List<float> vertices = [];
+        const int verticesMaxSize = Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize;
+        List<float> vertices = new(verticesMaxSize);
         for (int x = 0; x < Chunk.Size; x++)
         for (int y = 0; y < Chunk.Size; y++)
         for (int z = 0; z < Chunk.Size; z++)
