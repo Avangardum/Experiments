@@ -42,7 +42,9 @@ public sealed class WorldGenerator
     public Chunk GetChunk(Vector3D<int> index)
     {
         if (IsChunkIndexOutOfBounds(index)) return new Chunk(index);
-        return _chunkAwaitableDictionary[index];
+        Chunk chunk = _chunkAwaitableDictionary[index];
+        _chunkAwaitableDictionary.Remove(index);
+        return chunk;
     }
 
     private bool IsChunkIndexOutOfBounds(Vector3D<int> index)

@@ -56,4 +56,14 @@ public sealed class AwaitableDictionary<TKey, TValue> where TKey : notnull
                 tcs.Task.IsCompleted;
         }
     }
+    
+    public bool Remove(TKey key)
+    {
+        lock (_lock)
+        {
+            if (_taskCompletionSources.TryGetValue(key, out TaskCompletionSource<TValue>? tcs) && !tcs.Task.IsCompleted)
+                throw new InvalidOperationException("Can't remove a key for which a value is being awaited.");
+            return _taskCompletionSources.Remove(key);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 namespace SilknetOpenglBlocks;
 
-public enum Block
+public enum Block : byte
 {
     Air,
     Dirt,

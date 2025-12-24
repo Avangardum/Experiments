@@ -85,8 +85,11 @@ public sealed class ChunkMesher
     
     private ChunkMesh GenerateChunkMesh(Chunk chunkToMesh, IReadOnlyDictionary<Vector3D<int>, Chunk> chunks)
     {
-        const int verticesMaxSize = Chunk.Volume * CubeFaces * VerticesPerCubeFace * VertexSize;
-        List<float> vertices = new(verticesMaxSize);
+        // Here we read chunk data from the meshing thread, which could be altered by the main thread at the same time,
+        // leading to inconsistent data reads. But in such case affected meshes will be regenerated soon, so we can
+        // disregard this.
+        
+        List<float> vertices = [];
         for (int x = 0; x < Chunk.Size; x++)
         for (int y = 0; y < Chunk.Size; y++)
         for (int z = 0; z < Chunk.Size; z++)
