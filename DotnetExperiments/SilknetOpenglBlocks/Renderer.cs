@@ -135,7 +135,7 @@ public sealed class Renderer
         _chunkShaderProgram.SetUniform("projection", projection);
         ApplyGeneratedChunkMeshes();
         
-        const int renderDistance = 3;
+        const int renderDistance = 5;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;
@@ -147,6 +147,7 @@ public sealed class Renderer
         for (int z = minChunkIndex.Z; z <= maxChunkIndex.Z; z++)
         {
             Vector3D<int> index = new(x, y, z);
+            if (!IsChunkReadyForRendering(index)) continue;
             ChunkRenderState renderState = GetChunkRenderState(index);
             if (!IsChunkInFrustum(renderState.Chunk, viewProjection)) continue;
             if (renderState.ShouldRequestMeshing)
@@ -230,5 +231,16 @@ public sealed class Renderer
     public void PrintState()
     {
         Console.WriteLine($"Camera pos: {_camera.Position}");
+    }
+    
+    private bool IsChunkReadyForRendering(Vector3D<int> index)
+    {
+        return _game.IsChunkGenerated(index) &&
+           _game.IsChunkGenerated(index + Vector3D<int>.UnitX) &&
+           _game.IsChunkGenerated(index - Vector3D<int>.UnitX) &&
+           _game.IsChunkGenerated(index + Vector3D<int>.UnitY) &&
+           _game.IsChunkGenerated(index - Vector3D<int>.UnitY) &&
+           _game.IsChunkGenerated(index + Vector3D<int>.UnitZ) &&
+           _game.IsChunkGenerated(index - Vector3D<int>.UnitZ);
     }
 }

@@ -12,8 +12,8 @@ public sealed class WorldGenerator
     // and so on.
     
     private const int Seed = 12082036;
-    private static readonly Vector3D<int> MinChunkIndex = new(-30, -5, -30);
-    private static readonly Vector3D<int> MaxChunkIndex = new(30, 5, 30);
+    private static readonly Vector3D<int> MinChunkIndex = new(-10, -3, -10);
+    private static readonly Vector3D<int> MaxChunkIndex = new(10, 3, 10);
     private static readonly int MaxBoxIndex = new [] { MinChunkIndex.X, MinChunkIndex.Y, MinChunkIndex.Z, MaxChunkIndex.X, MaxChunkIndex.Y,
         MaxChunkIndex.Z }.Max(Math.Abs);
     
