@@ -129,13 +129,13 @@ public sealed class Renderer
         _chunkShaderProgram.SetUniform("textureSampler", 0);
         Matrix4X4<float> view = _camera.ViewMatrix;
         Matrix4X4<float> projection = Matrix4X4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _aspectRatio,
-            nearPlaneDistance: 0.01f, farPlaneDistance: 1000);
+            nearPlaneDistance: 0.01f, farPlaneDistance: 2000);
         Matrix4X4<float> viewProjection = view * projection;
         _chunkShaderProgram.SetUniform("view", view);
         _chunkShaderProgram.SetUniform("projection", projection);
         ApplyGeneratedChunkMeshes();
         
-        const int renderDistance = 5;
+        const int renderDistance = 20;
         Vector3D<int> currentChunkIndex = Chunk.WorldPosToChunkIndex(_camera.Position);
         Vector3D<int> minChunkIndex = currentChunkIndex - Vector3D<int>.One * renderDistance;
         Vector3D<int> maxChunkIndex = currentChunkIndex + Vector3D<int>.One * renderDistance;

@@ -7,6 +7,8 @@ namespace SilknetOpenglBlocks;
 
 public sealed class ChunkMesher
 {
+    // TODO add priority
+    
     private record MeshingRequest
     (
         IReadOnlyDictionary<Vector3D<int>, Chunk> Chunks,
